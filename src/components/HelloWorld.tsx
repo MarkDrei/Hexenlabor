@@ -16,30 +16,69 @@ export default function HelloWorld() {
     canvas.width = 800;
     canvas.height = 600;
 
-    // Clear canvas
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    let animationFrameId: number;
+    let x = 100;
+    const y = canvas.height / 2;
+    let speed = 2; // move right initially
+    let frameIndex = 0;
+    let tickCount = 0;
+    const ticksPerFrame = 10; // slow down animation
+    const numFrames = 5;
 
-    // Draw "Hello World" text
-    ctx.fillStyle = '#a78bfa';
-    ctx.font = 'bold 48px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('Hello World!', canvas.width / 2, canvas.height / 2 - 30);
+    const img = new Image();
+    img.src = '/assets/witch.png';
+    img.onload = () => {
+      const spriteWidth = img.width / 5;
+      const spriteHeight = img.height / 2;
+      const displayWidth = spriteWidth; // Or scaled size
+      const displayHeight = spriteHeight;
 
-    // Draw subtitle
-    ctx.fillStyle = '#7c3aed';
-    ctx.font = '24px Arial';
-    ctx.fillText(
-      'Das funkelnde Hexenlabor',
-      canvas.width / 2,
-      canvas.height / 2 + 30
-    );
+      const render = () => {
+        // Clear canvas
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw decorative frame
-    ctx.strokeStyle = '#ec4899';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+        // Update animation logic
+        x += speed;
+        
+        // Boundaries and flip logic
+        if (x + displayWidth > canvas.width) {
+          x = canvas.width - displayWidth;
+          speed = -Math.abs(speed); // Walk left
+        } else if (x < 0) {
+          x = 0;
+          speed = Math.abs(speed); // Walk right
+        }
+
+        tickCount++;
+        if (tickCount > ticksPerFrame) {
+          tickCount = 0;
+          frameIndex = (frameIndex + 1) % numFrames;
+        }
+
+        const sx = frameIndex * spriteWidth;
+        const sy = 0; // Top row
+
+        ctx.save();
+        if (speed < 0) {
+          // Flip horizontally
+          ctx.translate(x + displayWidth, y);
+          ctx.scale(-1, 1);
+          ctx.drawImage(img, sx, sy, spriteWidth, spriteHeight, 0, -displayHeight / 2, displayWidth, displayHeight);
+        } else {
+          ctx.drawImage(img, sx, sy, spriteWidth, spriteHeight, x, y - displayHeight / 2, displayWidth, displayHeight);
+        }
+        ctx.restore();
+
+        animationFrameId = requestAnimationFrame(render);
+      };
+
+      render();
+    };
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
   }, []);
 
   return (
