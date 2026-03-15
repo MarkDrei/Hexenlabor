@@ -427,14 +427,18 @@ export default function HelloWorld() {
     const thingsImg  = new Image(); thingsImg.src  = '/assets/things.png';
     const things2Img = new Image(); things2Img.src = '/assets/things2.png';
 
-    let rafId  = 0;
-    let lastT  = 0;
-    let frame  = 0;
+    // Named constants for magic numbers used in the loop
+    const MAX_FRAME_DELTA_MS      = 80;  // prevent spiral-of-death when tab is backgrounded
+    const UI_UPDATE_THROTTLE_FRAMES = 5; // sync React state every N frames to reduce re-renders
 
-    const loop = (t: number) => {
+    let rafId     = 0;
+    let lastTimestamp = 0;
+    let frame     = 0;
+
+    const loop = (timestamp: number) => {
       const state = stateRef.current!;
-      const dt  = Math.min(t - lastT, 80);
-      lastT = t;
+      const dt  = Math.min(timestamp - lastTimestamp, MAX_FRAME_DELTA_MS);
+      lastTimestamp = timestamp;
       frame++;
 
       const now = Date.now();
@@ -511,10 +515,10 @@ export default function HelloWorld() {
           if (pi.kind === 'well' && state.wellCooldown <= 0) {
             collectWater(state, now);
           } else if (pi.kind === 'npc') {
-            const npc = state.npcs.find(n => n.id === (pi as { kind: 'npc'; npcId: string }).npcId);
+            const npc = state.npcs.find(n => n.id === pi.npcId);
             if (npc && npc.interactCooldown <= 0) interactWithNPC(state, npc, now);
           } else if (pi.kind === 'chest') {
-            const chest = state.treasureChests.find(c => c.id === (pi as { kind: 'chest'; chestId: string }).chestId);
+            const chest = state.treasureChests.find(c => c.id === pi.chestId);
             if (chest && !chest.opened) openChest(state, chest, now);
           } else if (pi.kind === 'cauldron') {
             state.showCraftingMenu = true;
@@ -615,7 +619,7 @@ export default function HelloWorld() {
 
       // ── Mini-game ────────────────────────────────────────────────────────────
       if (state.miniGame) {
-        const elapsed = t - state.miniGame.startTime;
+        const elapsed = timestamp - state.miniGame.startTime;
         if (elapsed >= state.miniGame.duration) {
           const bonus = state.miniGame.score;
           state.score += bonus;
@@ -630,7 +634,7 @@ export default function HelloWorld() {
       const glowActive  = state.activeEffects.some(e => e.type === 'glow'  && e.endTime > state.gameTime);
       const isSleepActive = state.activeEffects.some(e => e.type === 'sleep' && e.endTime > state.gameTime);
 
-      drawBackground(ctx, cW, cH, t, state.isNight, state.weather, state.dayProgress);
+      drawBackground(ctx, cW, cH, timestamp, state.isNight, state.weather, state.dayProgress);
 
       // Rain
       if (state.rainDrops.length > 0) {
@@ -653,7 +657,7 @@ export default function HelloWorld() {
         });
         state.treasureChests.forEach(chest => {
           const near = Math.hypot(state.witchX - chest.x, state.witchY - chest.y) < INTERACT_DISTANCE;
-          drawChestAt(ctx, things2Img, chest, near, t);
+          drawChestAt(ctx, things2Img, chest, near, timestamp);
         });
       } else {
         // Fallback coloured circles if images not loaded
@@ -671,7 +675,7 @@ export default function HelloWorld() {
       // Cauldron glow
       if (state.cauldronGlowing) {
         ctx.save();
-        ctx.globalAlpha = 0.35 + Math.sin(t * 0.005) * 0.15;
+        ctx.globalAlpha = 0.35 + Math.sin(timestamp * 0.005) * 0.15;
         ctx.fillStyle = '#a78bfa';
         ctx.beginPath(); ctx.arc(cauldronX, cauldronY - 28, 42, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
@@ -698,19 +702,19 @@ export default function HelloWorld() {
       // Fairy
       if (state.fairyActive) {
         ctx.save();
-        ctx.globalAlpha = 0.12 + Math.sin(t * 0.003) * 0.04;
+        ctx.globalAlpha = 0.12 + Math.sin(timestamp * 0.003) * 0.04;
         ctx.fillStyle = '#fbbf24';
         ctx.fillRect(0, 0, cW, cH);
         ctx.restore();
-        const fx = cW * 0.84 + Math.sin(t * 0.0018) * 28;
-        const fy = cH * 0.22 + Math.cos(t * 0.0025) * 18;
+        const fx = cW * 0.84 + Math.sin(timestamp * 0.0018) * 28;
+        const fy = cH * 0.22 + Math.cos(timestamp * 0.0025) * 18;
         ctx.font = '32px sans-serif'; ctx.textAlign = 'center';
         ctx.fillText('🧚', fx, fy);
       }
 
       // Mini-game canvas overlay
       if (state.miniGame) {
-        const elapsed = t - state.miniGame.startTime;
+        const elapsed = timestamp - state.miniGame.startTime;
         const left    = Math.max(0, (state.miniGame.duration - elapsed) / 1000);
         ctx.save();
         ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -722,7 +726,7 @@ export default function HelloWorld() {
       }
 
       // ── Sync React state ─────────────────────────────────────────────────────
-      if (frame % 5 === 0) {
+      if (frame % UI_UPDATE_THROTTLE_FRAMES === 0) {
         const vis = state.notifications.filter(n => now - n.timestamp < n.duration);
         setUiInventory([...state.inventory]);
         setNotifications([...vis]);
@@ -733,7 +737,7 @@ export default function HelloWorld() {
         setActiveEffectNames(state.activeEffects.filter(e => e.endTime > state.gameTime).map(e => e.type));
         setShowCrafting(state.showCraftingMenu);
         if (state.miniGame) {
-          const elapsed = t - state.miniGame.startTime;
+          const elapsed = timestamp - state.miniGame.startTime;
           setMiniGameUI({ timeLeft: Math.ceil(Math.max(0, state.miniGame.duration - elapsed) / 1000), score: state.miniGame.score });
         } else {
           setMiniGameUI(null);

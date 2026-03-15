@@ -127,9 +127,12 @@ export function removeFromInventory(
   type: ItemType,
   amount = 1,
 ): GameState['inventory'] {
-  return inventory
-    .map(i => i.type === type ? { ...i, quantity: i.quantity - amount } : i)
-    .filter(i => i.quantity > 0);
+  return inventory.reduce<GameState['inventory']>((acc, i) => {
+    if (i.type !== type) { acc.push(i); return acc; }
+    const newQty = i.quantity - amount;
+    if (newQty > 0) acc.push({ ...i, quantity: newQty });
+    return acc;
+  }, []);
 }
 
 export function hasIngredients(
