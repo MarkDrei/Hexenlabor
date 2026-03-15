@@ -187,8 +187,8 @@ export function startMemoryMiniGame(state: GameState): void {
   for (let i = pairs.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     const temp = pairs[i];
-    pairs[i] = pairs[j] as IngredientType;
-    pairs[j] = temp as IngredientType;
+    pairs[i] = pairs[j];
+    pairs[j] = temp;
   }
 
   const cols = 4;

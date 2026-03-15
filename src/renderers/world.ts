@@ -354,7 +354,7 @@ export function drawActionPrompt(
 }
 
 /** One star per this many screen pixels for a balanced night sky density */
-const PIXELS_PER_STAR = 10000;
+const SCREEN_AREA_PER_STAR = 10000;
 
 export function drawNightStars(
   ctx: CanvasRenderingContext2D,
@@ -364,7 +364,7 @@ export function drawNightStars(
   time: number
 ): void {
   if (!state.isNight) return;
-  const numStars = Math.floor(width * height / PIXELS_PER_STAR);
+  const numStars = Math.floor(width * height / SCREEN_AREA_PER_STAR);
   ctx.save();
   for (let i = 0; i < numStars; i++) {
     const sx = (Math.sin(i * 123.4) * 0.5 + 0.5) * width;

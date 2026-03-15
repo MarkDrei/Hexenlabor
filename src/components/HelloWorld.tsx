@@ -156,8 +156,8 @@ export default function HelloWorld() {
           addMessage(state, '🌙 Night falls! Catch the stars!', '#818cf8');
           break;
         case 'grow_potion': {
-          const count2 = 4 + Math.floor(Math.random() * 3);
-          for (let i = 0; i < count2; i++) {
+          const spawnCount = 4 + Math.floor(Math.random() * 3);
+          for (let i = 0; i < spawnCount; i++) {
             if (state.worldIngredients.filter((x) => !x.collected).length < 16) {
               state.worldIngredients.push(spawnIngredient(w, h));
             }
