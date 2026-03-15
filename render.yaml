@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: das-funkelnde-hexenlabor
+    runtime: node
+    region: frankfurt
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 20
+      # Required by iron-session for cookie encryption.
+      # Generate with: openssl rand -base64 32
+      - key: SECRET_COOKIE_PASSWORD
+        generateValue: true
