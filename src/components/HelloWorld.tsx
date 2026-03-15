@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { drawBackground } from '@/renderers/background';
+import { drawThings } from '@/renderers/things';
 
 export default function HelloWorld() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -36,6 +37,12 @@ export default function HelloWorld() {
     let tickCount = 0;
     const ticksPerFrame = 8;
     const numFrames = 5;
+
+    // NPC State
+    let npcX1 = -100;
+    let npcX2 = -300;
+    let npcFrameIndex = 0;
+    let npcTickCount = 0;
 
     // Track if mouse button is held down
     let isMouseDown = false;
@@ -75,6 +82,15 @@ export default function HelloWorld() {
     canvas.addEventListener('mousemove', handleMouseMove);
     canvas.addEventListener('mouseup', handleMouseUp);
 
+    const thingsImg = new Image();
+    thingsImg.src = '/assets/things.png';
+
+    const things2Img = new Image();
+    things2Img.src = '/assets/things2.png';
+
+    const catFluffyImg = new Image();
+    catFluffyImg.src = '/assets/catFluffy.png';
+
     const img = new Image();
     img.src = '/assets/witch.png';
     img.onload = () => {
@@ -86,6 +102,11 @@ export default function HelloWorld() {
       const render = (time: number) => {
         // Draw magical background instead of clearing
         drawBackground(ctx, canvas.width, canvas.height, time);
+        
+        // Draw static environment things
+        if (thingsImg.complete) {
+          drawThings(ctx, canvas.width, canvas.height, thingsImg, things2Img);
+        }
 
         // Update animation logic
         const dx = targetX - x;
@@ -144,6 +165,33 @@ export default function HelloWorld() {
           ctx.drawImage(img, sx, sy, spriteWidth, spriteHeight, x - displayWidth / 2, y - displayHeight / 2, displayWidth, displayHeight);
         }
         ctx.restore();
+
+        // Draw new NPCs
+        if (catFluffyImg.complete && catFluffyImg.naturalWidth > 0) {
+          const npcSpriteW = catFluffyImg.width / 5;
+          const npcSpriteH = catFluffyImg.height / 2;
+          const npcY = canvas.height * 0.75; // Walk along the bottom 1/4
+
+          npcX1 += 2;
+          npcX2 += 2;
+          
+          if (npcX1 > canvas.width + 200) npcX1 = -200;
+          if (npcX2 > canvas.width + 200) npcX2 = -200;
+
+          npcTickCount++;
+          if (npcTickCount > 8) {
+            npcTickCount = 0;
+            npcFrameIndex = (npcFrameIndex + 1) % 5;
+          }
+
+          const npcSX = npcFrameIndex * npcSpriteW;
+          
+          // Draw Cat (Top Row)
+          ctx.drawImage(catFluffyImg, npcSX, 0, npcSpriteW, npcSpriteH, npcX1 - npcSpriteW / 2, npcY - npcSpriteH, npcSpriteW, npcSpriteH);
+          
+          // Draw Monster (Bottom Row)
+          ctx.drawImage(catFluffyImg, npcSX, npcSpriteH, npcSpriteW, npcSpriteH, npcX2 - npcSpriteW / 2, npcY - npcSpriteH + 50, npcSpriteW, npcSpriteH);
+        }
 
         animationFrameId = requestAnimationFrame(render);
       };

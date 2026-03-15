@@ -8,8 +8,11 @@ export function drawBackground(ctx: CanvasRenderingContext2D, width: number, hei
 
   // Draw stars (removed - daytime doesn't have visible stars)
 
-  // Draw distant mountains - grey
-  ctx.fillStyle = '#9ca3af';
+  // Draw distant mountains - grey gradient
+  const mountainGradient = ctx.createLinearGradient(0, height * 0.4, 0, height * 0.75);
+  mountainGradient.addColorStop(0, '#d1d5db'); // light grey at top
+  mountainGradient.addColorStop(1, '#6b7280'); // darker grey at bottom
+  ctx.fillStyle = mountainGradient;
   ctx.beginPath();
   ctx.moveTo(0, height * 0.7);
   ctx.lineTo(width * 0.2, height * 0.5);
