@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { drawBackground } from '@/renderers/background';
 
 export default function HelloWorld() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -82,10 +83,9 @@ export default function HelloWorld() {
       const displayWidth = spriteWidth;
       const displayHeight = spriteHeight;
 
-      const render = () => {
-        // Clear canvas
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      const render = (time: number) => {
+        // Draw magical background instead of clearing
+        drawBackground(ctx, canvas.width, canvas.height, time);
 
         // Update animation logic
         const dx = targetX - x;
@@ -148,7 +148,7 @@ export default function HelloWorld() {
         animationFrameId = requestAnimationFrame(render);
       };
 
-      render();
+      requestAnimationFrame(render);
     };
 
     return () => {
