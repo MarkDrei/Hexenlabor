@@ -22,6 +22,7 @@ import {
   EVENT_INTERVAL,
   MAX_INGREDIENTS_ON_MAP,
   NPC_GIFT_COOLDOWN,
+  RAINBOW_CAULDRON_COLOR,
 } from './constants';
 
 let _idCounter = 0;
@@ -339,7 +340,7 @@ export function brewPotion(state: GameState, potionId: PotionType): string {
   state.potions.push(potionId);
   state.cauldron.brewing = true;
   state.cauldron.brewTimer = 1200;
-  state.cauldron.liquidColor = recipe.color === 'rainbow' ? '#ff6b6b' : recipe.color;
+  state.cauldron.liquidColor = recipe.color === 'rainbow' ? RAINBOW_CAULDRON_COLOR : recipe.color;
   state.score += 100;
 
   spawnParticles(state, state.cauldron.x, state.cauldron.y, recipe.color, 20, 1.5);
@@ -491,7 +492,7 @@ export function triggerRandomEvent(state: GameState, canvasW: number, canvasH: n
     case 'magicGarden':
       state.magicGardenActive = true;
       state.magicGardenTimer = 25000;
-      showMessage(state, '🌱 Magic Garden! Ingredients grow twice as fast for 25 seconds!');
+      showMessage(state, '🌱 Magic Garden! Ingredients appear 2.5× faster for 25 seconds!');
       break;
     case 'catGift': {
       const gifts: IngredientType[] = ['crystal', 'starDust', 'essence'];

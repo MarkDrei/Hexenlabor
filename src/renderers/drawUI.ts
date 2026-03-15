@@ -135,11 +135,17 @@ export function drawInventory(
       ctx.fillText(`${count}`, sx + SLOT_SIZE - 4, y + SLOT_SIZE - 4);
     }
 
-    // Name label
+    // Name label (two lines when name contains a space)
     ctx.fillStyle = count > 0 ? '#e9d5ff' : '#6b21a8';
     ctx.font = '9px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(def.name.replace(' ', '\n'), sx + SLOT_SIZE / 2, y + SLOT_SIZE + 10);
+    const nameParts = def.name.split(' ');
+    if (nameParts.length >= 2) {
+      ctx.fillText(nameParts[0], sx + SLOT_SIZE / 2, y + SLOT_SIZE + 8);
+      ctx.fillText(nameParts.slice(1).join(' '), sx + SLOT_SIZE / 2, y + SLOT_SIZE + 18);
+    } else {
+      ctx.fillText(def.name, sx + SLOT_SIZE / 2, y + SLOT_SIZE + 10);
+    }
   }
 
   ctx.restore();
@@ -354,12 +360,7 @@ export function drawBrewingPanel(
     ctx.font = '10px sans-serif';
     ctx.fillText(ingStr, rx + rw / 2, ry + 34, rw - 10);
 
-    // Have / need
-    for (const [t, n] of Object.entries(recipe.ingredients) as [IngredientType, number][]) {
-      const have = state.inventory[t] ?? 0;
-      // drawn inline above
-      void (n + have); // suppress TS
-    }
+    // Ingredients have / need — shown via canBrew colouring above
 
     // Key hint
     ctx.fillStyle = canBrew ? '#facc15' : '#4c1d95';

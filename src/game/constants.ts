@@ -123,6 +123,9 @@ export const SPAWN_WEIGHTS: IngredientType[] = [
   'essence',
 ];
 
+// Cauldron liquid color when brewing a rainbow potion
+export const RAINBOW_CAULDRON_COLOR = '#ff6b6b';
+
 // Tuning
 export const CAULDRON_RANGE = 90;         // px — witch can interact with cauldron
 export const INGREDIENT_COLLECT_RANGE = 50; // px — auto-collect radius

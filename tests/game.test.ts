@@ -100,14 +100,17 @@ describe('Game Logic', () => {
     });
 
     it('spawns essence more often when crystal is active', () => {
-      const essenceCount = Array.from({ length: 200 }, () =>
+      const SAMPLES = 1000;
+      const essenceCount = Array.from({ length: SAMPLES }, () =>
         spawnIngredient(800, 600, true)
       ).filter(i => i.type === 'essence').length;
-      const normalCount = Array.from({ length: 200 }, () =>
+      const normalCount = Array.from({ length: SAMPLES }, () =>
         spawnIngredient(800, 600, false)
       ).filter(i => i.type === 'essence').length;
-      // Crystal-active should yield more essence on average
-      expect(essenceCount).toBeGreaterThanOrEqual(normalCount);
+      // Crystal-active adds 3 extra essence entries to the pool (15 total vs 12),
+      // so the expected ratio is ≈25% vs ≈8.3%. With 1000 samples the probability
+      // of the crystal count being lower than normal is vanishingly small.
+      expect(essenceCount).toBeGreaterThan(normalCount);
     });
   });
 

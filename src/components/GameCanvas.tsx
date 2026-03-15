@@ -209,7 +209,7 @@ export default function GameCanvas() {
     let raf: number;
 
     const loop = (now: number) => {
-      const dt = Math.min(now - lastTime, 64); // cap delta at 64ms (≈15fps min)
+      const dt = Math.min(now - lastTime, 64); // cap delta at 64ms to handle slow frames gracefully
       lastTime = now;
 
       const state = stateRef.current;
