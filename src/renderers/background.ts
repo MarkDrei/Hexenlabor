@@ -1,18 +1,65 @@
-export function drawBackground(ctx: CanvasRenderingContext2D, width: number, height: number, time: number) {
-  // Clear and draw sky gradient - blue sky
-  const skyGradient = ctx.createLinearGradient(0, 0, 0, height);
-  skyGradient.addColorStop(0, '#87ceeb'); // sky blue
-  skyGradient.addColorStop(1, '#e0f6ff'); // lighter blue at horizon
+import type { WeatherType } from '@/shared/types';
+
+export function drawBackground(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  time: number,
+  isNight = false,
+  weather: WeatherType = 'sunny',
+  dayProgress = 0,
+) {
+  // ── Sky ──────────────────────────────────────────────────────────────────────
+  const skyGradient = ctx.createLinearGradient(0, 0, 0, height * 0.75);
+  if (isNight) {
+    skyGradient.addColorStop(0, '#0f172a');
+    skyGradient.addColorStop(1, '#1e293b');
+  } else if (weather === 'stormy') {
+    skyGradient.addColorStop(0, '#374151');
+    skyGradient.addColorStop(1, '#6b7280');
+  } else if (weather === 'rainy' || weather === 'cloudy') {
+    skyGradient.addColorStop(0, '#64748b');
+    skyGradient.addColorStop(1, '#94a3b8');
+  } else {
+    skyGradient.addColorStop(0, '#87ceeb');
+    skyGradient.addColorStop(1, '#e0f6ff');
+  }
   ctx.fillStyle = skyGradient;
   ctx.fillRect(0, 0, width, height);
 
-  // Draw stars (removed - daytime doesn't have visible stars)
+  // ── Stars / Moon (night) ──────────────────────────────────────────────────────
+  if (isNight) {
+    drawStars(ctx, width, height, time);
+    // Moon
+    const moonX = width * 0.8;
+    const moonY = height * 0.15;
+    ctx.fillStyle = '#fef3c7';
+    ctx.beginPath();
+    ctx.arc(moonX, moonY, 28, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.arc(moonX + 10, moonY - 4, 22, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
-  // Draw distant mountains - grey gradient
-  const mountainGradient = ctx.createLinearGradient(0, height * 0.4, 0, height * 0.75);
-  mountainGradient.addColorStop(0, '#d1d5db'); // light grey at top
-  mountainGradient.addColorStop(1, '#6b7280'); // darker grey at bottom
-  ctx.fillStyle = mountainGradient;
+  // ── Sun (day) ─────────────────────────────────────────────────────────────────
+  if (!isNight && weather === 'sunny') {
+    const sunX = width * (0.15 + dayProgress * 0.7);
+    const sunY = height * (0.2 - Math.abs(dayProgress - 0.25) * 0.18);
+    const sunGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 36);
+    sunGrad.addColorStop(0, 'rgba(255,255,180,1)');
+    sunGrad.addColorStop(0.5, 'rgba(255,220,60,0.8)');
+    sunGrad.addColorStop(1, 'rgba(255,180,0,0)');
+    ctx.fillStyle = sunGrad;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 36, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ── Distant mountains ─────────────────────────────────────────────────────────
+  const mtnColor = isNight ? '#1e3a5f' : '#9ca3af';
+  ctx.fillStyle = mtnColor;
   ctx.beginPath();
   ctx.moveTo(0, height * 0.7);
   ctx.lineTo(width * 0.2, height * 0.5);
@@ -23,8 +70,8 @@ export function drawBackground(ctx: CanvasRenderingContext2D, width: number, hei
   ctx.lineTo(0, height);
   ctx.fill();
 
-  // Draw background hills - darker green
-  ctx.fillStyle = '#22c55e';
+  // ── Background hills ─────────────────────────────────────────────────────────
+  ctx.fillStyle = isNight ? '#14532d' : '#16a34a';
   ctx.beginPath();
   ctx.moveTo(0, height * 0.75);
   ctx.quadraticCurveTo(width * 0.25, height * 0.6, width * 0.5, height * 0.8);
@@ -33,8 +80,8 @@ export function drawBackground(ctx: CanvasRenderingContext2D, width: number, hei
   ctx.lineTo(0, height);
   ctx.fill();
 
-  // Draw foreground hills - bright green
-  ctx.fillStyle = '#4ade80';
+  // ── Foreground hills ─────────────────────────────────────────────────────────
+  ctx.fillStyle = isNight ? '#166534' : '#22c55e';
   ctx.beginPath();
   ctx.moveTo(0, height * 0.8);
   ctx.quadraticCurveTo(width * 0.2, height * 1.0, width * 0.6, height * 0.85);
@@ -42,48 +89,55 @@ export function drawBackground(ctx: CanvasRenderingContext2D, width: number, hei
   ctx.lineTo(width, height);
   ctx.lineTo(0, height);
   ctx.fill();
-    
-  // Draw floor/ground - grass
-  const groundGradient = ctx.createLinearGradient(0, height * 0.9, 0, height);
-  groundGradient.addColorStop(0, '#4ade80');
-  groundGradient.addColorStop(1, '#16a34a');
-  ctx.fillStyle = groundGradient;
+
+  // ── Ground ───────────────────────────────────────────────────────────────────
+  const groundGrad = ctx.createLinearGradient(0, height * 0.9, 0, height);
+  if (isNight) {
+    groundGrad.addColorStop(0, '#15803d');
+    groundGrad.addColorStop(1, '#14532d');
+  } else {
+    groundGrad.addColorStop(0, '#4ade80');
+    groundGrad.addColorStop(1, '#16a34a');
+  }
+  ctx.fillStyle = groundGrad;
   ctx.fillRect(0, height * 0.9, width, height * 0.1);
 
-  // Draw some simple clouds
-  const cloudOffset = time * 0.02; // Slow movement
-  drawCloud(ctx, (width * 0.2 + cloudOffset) % (width + 200) - 100, height * 0.2);
-  drawCloud(ctx, (width * 0.6 + cloudOffset * 1.5) % (width + 200) - 100, height * 0.3);
-  drawCloud(ctx, (width * 0.8 + cloudOffset * 0.8) % (width + 200) - 100, height * 0.15);
+  // ── Clouds ───────────────────────────────────────────────────────────────────
+  if (!isNight) {
+    const cloudAlpha = weather === 'stormy' ? 0.7 : weather === 'rainy' || weather === 'cloudy' ? 0.85 : 0.9;
+    const cloudColor = weather === 'stormy' ? 'rgba(100,100,110,' : 'rgba(255,255,255,';
+    const cloudOffset = time * 0.018;
+    const numClouds = weather === 'cloudy' || weather === 'rainy' || weather === 'stormy' ? 6 : 3;
+    for (let i = 0; i < numClouds; i++) {
+      const cx = ((width * (0.1 + i * 0.18) + cloudOffset * (1 + i * 0.3)) % (width + 250)) - 125;
+      const cy = height * (0.12 + i * 0.04);
+      drawCloud(ctx, cx, cy, cloudColor + cloudAlpha + ')');
+    }
+  }
 }
 
-function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+function drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, fillStyle: string) {
+  ctx.fillStyle = fillStyle;
   ctx.beginPath();
   ctx.arc(x, y, 20, Math.PI * 0.5, Math.PI * 1.5);
-  ctx.arc(x + 25, y - 15, 30, Math.PI * 1, Math.PI * 2);
-  ctx.arc(x + 55, y - 10, 25, Math.PI * 1, Math.PI * 2);
+  ctx.arc(x + 25, y - 15, 30, Math.PI, Math.PI * 2);
+  ctx.arc(x + 55, y - 10, 25, Math.PI, Math.PI * 2);
   ctx.arc(x + 75, y, 20, Math.PI * 1.5, Math.PI * 0.5);
   ctx.fill();
 }
 
 function drawStars(ctx: CanvasRenderingContext2D, width: number, height: number, time: number) {
-  ctx.fillStyle = 'white';
-  const numStars = Math.floor(width * height / 10000); // Responsive star density
-  
-  // Deterministic "random" based on index so they don't jump per frame
+  const numStars = Math.floor(width * height / 8_000);
   for (let i = 0; i < numStars; i++) {
-    const x = (Math.sin(i * 123) * 0.5 + 0.5) * width;
-    const y = (Math.cos(i * 321) * 0.5 + 0.5) * height * 0.6; // Stars only in top 60%
-    
-    // Twinkle effect
-    const twinkle = (Math.sin(time * 0.002 + i) * 0.5 + 0.5) * 0.8 + 0.2;
+    const x = (Math.sin(i * 127.1) * 0.5 + 0.5) * width;
+    const y = (Math.cos(i * 311.7) * 0.5 + 0.5) * height * 0.55;
+    const twinkle = (Math.sin(time * 0.002 + i * 0.7) * 0.5 + 0.5) * 0.8 + 0.2;
     ctx.globalAlpha = twinkle;
-    
+    ctx.fillStyle = 'white';
     const size = (Math.sin(i * 456) * 0.5 + 0.5) * 1.5 + 0.5;
     ctx.beginPath();
     ctx.arc(x, y, size, 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.globalAlpha = 1.0;
+  ctx.globalAlpha = 1;
 }
