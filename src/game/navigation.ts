@@ -257,7 +257,11 @@ export class NavigationMesh {
     return true;
   }
 
-  /** Draw the walkable polygons for debugging or background visualization */
+  /**
+   * Draw the walkable polygons for debugging or background visualization.
+   * The same polygon data (`this.polygons`) is used here AND for all
+   * walkability / pathfinding queries — there is a single source of truth.
+   */
   debugDraw(ctx: CanvasRenderingContext2D): void {
     ctx.save();
     ctx.fillStyle   = 'rgba(120, 200, 255, 0.18)';

@@ -84,10 +84,13 @@ export default function HelloWorld() {
     img.onload = () => {
       const spriteWidth = img.width / 5;
       const spriteHeight = img.height / 2;
-      const displayWidth = spriteWidth;
-      const displayHeight = spriteHeight;
+      // Keep the sprite aspect ratio; display height scales to 15% of canvas height.
+      const spriteAspect = spriteWidth / spriteHeight;
 
       const render = (time: number) => {
+        // Witch display size: 15% of current canvas height, proportional width
+        const displayHeight = canvas.height * 0.15;
+        const displayWidth = displayHeight * spriteAspect;
         // Draw magical background instead of clearing
         drawBackground(ctx, canvas.width, canvas.height, time);
         
