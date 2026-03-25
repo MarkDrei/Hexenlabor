@@ -3,6 +3,8 @@
 import { useEffect, useRef } from 'react';
 import { drawBackground } from '@/renderers/background';
 import { drawThings } from '@/renderers/things';
+import { NavigationMesh, createWitchNavMesh } from '@/game/navigation';
+import { Position } from '@/shared/types';
 
 export default function HelloWorld() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -15,28 +17,33 @@ export default function HelloWorld() {
     if (!ctx) return;
 
     // Full screen minus a small gap
+    let navMesh!: NavigationMesh;
+
     const updateCanvasSize = () => {
       canvas.width = window.innerWidth - 40;
       canvas.height = window.innerHeight - 40;
+      navMesh = createWitchNavMesh(canvas.width, canvas.height);
     };
     updateCanvasSize();
     window.addEventListener('resize', updateCanvasSize);
 
     let animationFrameId: number;
-    // Initial position in center
+    // Initial position in centre (lies on the X crossing)
     let x = canvas.width / 2;
     let y = canvas.height / 2;
-    let targetX = x;
-    let targetY = y;
-    
-    let speed = 3;
+
+    const speed = 3;
     let facingRight = true;
     let isMoving = false;
-    
+
     let frameIndex = 0;
     let tickCount = 0;
     const ticksPerFrame = 8;
     const numFrames = 5;
+
+    // Path-following state
+    let path: Position[] = [];
+    let pathIndex = 0;
 
     // NPC State
     let npcX1 = -100;
@@ -44,11 +51,8 @@ export default function HelloWorld() {
     let npcFrameIndex = 0;
     let npcTickCount = 0;
 
-    // Track if mouse button is held down
-    let isMouseDown = false;
-
     // Helper to get mouse position relative to canvas
-    const getMouseCanvasPos = (e: MouseEvent | MouseEvent): { x: number; y: number } => {
+    const getMouseCanvasPos = (e: MouseEvent): { x: number; y: number } => {
       const rect = canvas.getBoundingClientRect();
       return {
         x: e.clientX - rect.left,
@@ -56,31 +60,15 @@ export default function HelloWorld() {
       };
     };
 
-    // Start continuous tracking on mouse down
+    // On click: compute A* path to the nearest walkable point
     const handleMouseDown = (e: MouseEvent) => {
-      isMouseDown = true;
       const pos = getMouseCanvasPos(e);
-      targetX = pos.x;
-      targetY = pos.y;
-    };
-
-    // Update target position while mouse is held and moving
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isMouseDown) {
-        const pos = getMouseCanvasPos(e);
-        targetX = pos.x;
-        targetY = pos.y;
-      }
-    };
-
-    // Stop tracking on mouse up (witch will walk to final position and stop)
-    const handleMouseUp = () => {
-      isMouseDown = false;
+      const target = navMesh.nearestWalkablePoint(pos);
+      path = navMesh.findPath({ x, y }, target);
+      pathIndex = 0;
     };
 
     canvas.addEventListener('mousedown', handleMouseDown);
-    canvas.addEventListener('mousemove', handleMouseMove);
-    canvas.addEventListener('mouseup', handleMouseUp);
 
     const thingsImg = new Image();
     thingsImg.src = '/assets/things.png';
@@ -96,10 +84,13 @@ export default function HelloWorld() {
     img.onload = () => {
       const spriteWidth = img.width / 5;
       const spriteHeight = img.height / 2;
-      const displayWidth = spriteWidth;
-      const displayHeight = spriteHeight;
+      // Keep the sprite aspect ratio; display height scales to 15% of canvas height.
+      const spriteAspect = spriteWidth / spriteHeight;
 
       const render = (time: number) => {
+        // Witch display size: 15% of current canvas height, proportional width
+        const displayHeight = canvas.height * 0.15;
+        const displayWidth = displayHeight * spriteAspect;
         // Draw magical background instead of clearing
         drawBackground(ctx, canvas.width, canvas.height, time);
         
@@ -108,47 +99,42 @@ export default function HelloWorld() {
           drawThings(ctx, canvas.width, canvas.height, thingsImg, things2Img);
         }
 
-        // Update animation logic
-        const dx = targetX - x;
-        const dy = targetY - y;
-        const distance = Math.hypot(dx, dy);
+        // Draw walkable navigation shape behind the witch
+        navMesh.debugDraw(ctx);
 
-        // Keep moving if mouse is held OR if still not at destination
-        isMoving = isMouseDown || distance > speed;
+        // ── Update witch movement along the A* path ──────────────────────
+        if (pathIndex < path.length) {
+          const wp = path[pathIndex];
+          const dx = wp.x - x;
+          const dy = wp.y - y;
+          const dist = Math.hypot(dx, dy);
 
-        if (isMouseDown) {
-          // While mouse is held, walk toward target and continue animation
-          if (distance > speed) {
-            // Still have distance to cover, move and update direction
-            x += (dx / distance) * speed;
-            y += (dy / distance) * speed;
+          if (dist <= speed) {
+            // Reached this waypoint – snap and advance
+            x = wp.x;
+            y = wp.y;
+            pathIndex++;
+            isMoving = pathIndex < path.length;
+          } else {
+            x += (dx / dist) * speed;
+            y += (dy / dist) * speed;
             if (dx > 0) facingRight = true;
             else if (dx < 0) facingRight = false;
+            isMoving = true;
           }
-          // Keep animating walking frames regardless (no direction change if at destination)
-          tickCount++;
-          if (tickCount > ticksPerFrame) {
-            tickCount = 0;
-            frameIndex = (frameIndex + 1) % numFrames;
-          }
-        } else if (distance > speed) {
-          // Not holding mouse, but still need to reach destination
-          x += (dx / distance) * speed;
-          y += (dy / distance) * speed;
-          if (dx > 0) facingRight = true;
-          else if (dx < 0) facingRight = false;
 
-          tickCount++;
-          if (tickCount > ticksPerFrame) {
-            tickCount = 0;
-            frameIndex = (frameIndex + 1) % numFrames;
+          if (isMoving) {
+            tickCount++;
+            if (tickCount > ticksPerFrame) {
+              tickCount = 0;
+              frameIndex = (frameIndex + 1) % numFrames;
+            }
           }
         } else {
-          // Arrived at destination and mouse is released
-          x = targetX;
-          y = targetY;
+          // Arrived – idle
+          isMoving = false;
           tickCount = 0;
-          frameIndex = 0; // Return to idle frame
+          frameIndex = 0;
         }
 
         const sx = frameIndex * spriteWidth;
@@ -203,8 +189,6 @@ export default function HelloWorld() {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', updateCanvasSize);
       canvas.removeEventListener('mousedown', handleMouseDown);
-      canvas.removeEventListener('mousemove', handleMouseMove);
-      canvas.removeEventListener('mouseup', handleMouseUp);
     };
   }, []);
 
