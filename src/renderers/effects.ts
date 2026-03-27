@@ -82,7 +82,9 @@ export function drawSparkles(
   ctx.restore();
 }
 
-/** Draw brewing bubbles above the cauldron */
+/** Draw brewing bubbles above the cauldron.
+ *  Each bubble rises from the cauldron and grows in size as phaseProgress (0–1) advances.
+ */
 export function drawBrewingBubbles(
   ctx: CanvasRenderingContext2D,
   cauldronX: number,
@@ -91,35 +93,65 @@ export function drawBrewingBubbles(
   bubbleTimer: number,
   bubbleActive: boolean,
   totalBubbles: number,
+  phaseProgress: number,
 ): void {
   const colors = ['#a78bfa', '#ec4899', '#22c55e'];
+  const MAX_RISE = 130;
+  const MIN_SIZE = 6;
+  const MAX_SIZE = 26;
+  const DOT_SPACING = 18;
+  const DOT_Y_OFFSET = 22;
+
+  // Progress dots below the cauldron to show remaining bubbles
+  const dotsStartX = cauldronX - ((totalBubbles - 1) * DOT_SPACING) / 2;
   for (let i = 0; i < totalBubbles; i++) {
-    const bx = cauldronX + (i - 1) * 40;
-    const by = cauldronY - 30 - i * 15;
-    const isCurrent = i === bubbleIndex;
-    const isPast = i < bubbleIndex;
-    const size = isCurrent ? 18 + Math.sin(bubbleTimer * 0.1) * 4 : 14;
+    const dx = dotsStartX + i * DOT_SPACING;
+    const dy = cauldronY + DOT_Y_OFFSET;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(dx, dy, 5, 0, Math.PI * 2);
+    if (i < bubbleIndex) {
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.globalAlpha = 0.9;
+    } else if (i === bubbleIndex) {
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.globalAlpha = 0.4;
+    } else {
+      ctx.fillStyle = 'rgba(200, 200, 255, 0.25)';
+    }
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Rising current bubble: starts small at cauldron, grows and floats upward
+  if (bubbleIndex < totalBubbles) {
+    const riseY = cauldronY - phaseProgress * MAX_RISE;
+    const size = MIN_SIZE + phaseProgress * (MAX_SIZE - MIN_SIZE);
+    const color = colors[bubbleIndex % colors.length];
 
     ctx.save();
-    ctx.globalAlpha = isPast ? 0.3 : 1;
 
-    if (isCurrent && bubbleActive) {
-      // Glowing active bubble
-      ctx.shadowColor = colors[i % colors.length];
-      ctx.shadowBlur = 20;
+    if (bubbleActive) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 28;
     }
 
+    // Bubble body
     ctx.beginPath();
-    ctx.arc(bx, by, size, 0, Math.PI * 2);
-    ctx.fillStyle = isCurrent && bubbleActive
-      ? colors[i % colors.length]
-      : 'rgba(200, 200, 255, 0.4)';
+    ctx.arc(cauldronX, riseY, size, 0, Math.PI * 2);
+    ctx.fillStyle = bubbleActive ? color : 'rgba(180, 180, 255, 0.45)';
     ctx.fill();
 
-    // Bubble highlight
+    // Bubble outline
+    ctx.strokeStyle = bubbleActive ? 'rgba(255, 255, 255, 0.5)' : 'rgba(180, 180, 255, 0.3)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Bubble highlight (shimmer)
+    ctx.shadowBlur = 0;
     ctx.beginPath();
-    ctx.arc(bx - size * 0.3, by - size * 0.3, size * 0.3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.arc(cauldronX - size * 0.3, riseY - size * 0.3, size * 0.25, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
     ctx.fill();
 
     ctx.restore();
