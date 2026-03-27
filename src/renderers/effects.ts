@@ -202,6 +202,32 @@ export function drawFloatingSparkles(
   ctx.restore();
 }
 
+/** Draw flying star animations toward the star counter (top-left). */
+export function drawStarFlyAnimations(
+  ctx: CanvasRenderingContext2D,
+  animations: { x: number; y: number; targetX: number; targetY: number; progress: number }[],
+): void {
+  for (const anim of animations) {
+    const t = anim.progress;
+    // Parabolic arc: linear lerp + upward arc
+    const lx = anim.x + (anim.targetX - anim.x) * t;
+    const ly = anim.y + (anim.targetY - anim.y) * t;
+    const arcY = ly - 80 * Math.sin(t * Math.PI);
+    const size = 22 * (1 - t * 0.5);
+    const alpha = t < 0.75 ? 1 : 1 - (t - 0.75) / 0.25;
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, alpha);
+    ctx.font = `${size}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = '#facc15';
+    ctx.shadowBlur = 12;
+    ctx.fillText('⭐', lx, arcY);
+    ctx.restore();
+  }
+}
+
 /** Draw a moon crescent in the attic window */
 export function drawMoonCrescent(
   ctx: CanvasRenderingContext2D,

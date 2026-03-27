@@ -7,7 +7,7 @@ import { gameState, addToInventory, addStars, setPhase, startBrewing, updateColl
 import { updateIngredients, findNearbyIngredient, removeIngredient } from '@/game/ingredients';
 import { findMatchingRecipe, consumeRecipeIngredients } from '@/game/recipes';
 import { updateOrders, getOrderForRequester, hasMatchingPotion } from '@/game/orders';
-import { drawIngredientPickup, drawSparkles, drawBrewingBubbles, drawCollectAnimations, drawCandle, drawFloatingSparkles, drawMoonCrescent } from '@/renderers/effects';
+import { drawIngredientPickup, drawSparkles, drawBrewingBubbles, drawCollectAnimations, drawCandle, drawFloatingSparkles, drawMoonCrescent, drawStarFlyAnimations } from '@/renderers/effects';
 import { drawHud, drawSpeechBubble, HudLayout } from '@/renderers/hud';
 
 export default function GameCanvas() {
@@ -79,6 +79,14 @@ export default function GameCanvas() {
 
     // Sparkle effects for collected ingredients
     let sparkles: { x: number; y: number; color: string; progress: number }[] = [];
+
+    // Flying star animations toward the star counter
+    let starFlies: { x: number; y: number; targetX: number; targetY: number; progress: number }[] = [];
+
+    // NPC celebration flip timers (in frames, count down to 0)
+    const FLIP_DURATION = 80;
+    let catFlipTimer = 0;
+    let monsterFlipTimer = 0;
 
     // Long press tracking
     let pointerDownTimer: ReturnType<typeof setTimeout> | null = null;
@@ -231,14 +239,36 @@ export default function GameCanvas() {
       if (!order || !gameState.brewedPotion) return;
       const completed = completeOrder(order.id);
       if (completed) {
-        addStars(completed.recipe.rewardStars);
+        const stars = completed.recipe.rewardStars;
+        addStars(stars);
         gameState.brewedPotion = null;
-        // Celebration sparkles
         const npcPos = requester === 'cat'
           ? { x: catX, y: canvas.height * 0.48 - (hutBounds?.yOffset || 0) }
           : { x: monsterX, y: canvas.height * 0.66 - (hutBounds?.yOffset || 0) };
-        sparkles.push({ x: npcPos.x, y: npcPos.y - 40, color: '#facc15', progress: 0 });
-        sparkles.push({ x: npcPos.x, y: npcPos.y - 40, color: '#ec4899', progress: 0 });
+        // Trigger NPC backflip
+        if (requester === 'cat') catFlipTimer = FLIP_DURATION;
+        else monsterFlipTimer = FLIP_DURATION;
+        // Celebration sparkle burst
+        const burstColors = ['#facc15', '#ec4899', '#a78bfa', '#34d399', '#60a5fa'];
+        for (let i = 0; i < 8; i++) {
+          sparkles.push({
+            x: npcPos.x + (Math.random() - 0.5) * 40,
+            y: npcPos.y - 20 + (Math.random() - 0.5) * 30,
+            color: burstColors[i % burstColors.length],
+            progress: Math.random() * 0.2,
+          });
+        }
+        // Flying stars toward the star counter (approx top-left at (35, 20))
+        const numStarFlies = Math.min(stars, 5);
+        for (let i = 0; i < numStarFlies; i++) {
+          starFlies.push({
+            x: npcPos.x + (Math.random() - 0.5) * 30,
+            y: npcPos.y - 30,
+            targetX: 35,
+            targetY: 20,
+            progress: i * 0.12,
+          });
+        }
       }
     };
 
@@ -246,10 +276,22 @@ export default function GameCanvas() {
       const recipe = findMatchingRecipe();
       if (recipe && gameState.brewingState) {
         const multiplier = Math.max(1, gameState.brewingState.hits);
-        addStars(recipe.rewardStars * multiplier);
+        const starsEarned = recipe.rewardStars * multiplier;
+        addStars(starsEarned);
         gameState.brewedPotion = recipe;
         consumeRecipeIngredients(recipe);
         getRecipeUnlocks();
+        // Flying stars from cauldron to star counter
+        const numStarFlies = Math.min(starsEarned, 5);
+        for (let i = 0; i < numStarFlies; i++) {
+          starFlies.push({
+            x: cauldronCenterX + (Math.random() - 0.5) * 30,
+            y: cauldronCenterY - 20,
+            targetX: 35,
+            targetY: 20,
+            progress: i * 0.15,
+          });
+        }
       }
       setPhase('exploring');
       gameState.brewingState = null;
@@ -521,7 +563,13 @@ export default function GameCanvas() {
 
           // Draw Cat
           ctx.save();
-          if (catFacingRight) {
+          if (catFlipTimer > 0) {
+            const flipAngle = ((FLIP_DURATION - catFlipTimer) / FLIP_DURATION) * Math.PI * 4;
+            ctx.translate(catX, catY - displayH / 2);
+            ctx.rotate(flipAngle);
+            ctx.drawImage(catFluffyImg, catSX, 0, npcSpriteW, npcSpriteH, -displayW / 2, -displayH / 2, displayW, displayH);
+            catFlipTimer--;
+          } else if (catFacingRight) {
             ctx.drawImage(catFluffyImg, catSX, 0, npcSpriteW, npcSpriteH, catX - displayW / 2, catY - displayH, displayW, displayH);
           } else {
             ctx.translate(catX, catY);
@@ -532,7 +580,13 @@ export default function GameCanvas() {
 
           // Draw monster
           ctx.save();
-          if (monsterFacingRight) {
+          if (monsterFlipTimer > 0) {
+            const flipAngle = ((FLIP_DURATION - monsterFlipTimer) / FLIP_DURATION) * Math.PI * 4;
+            ctx.translate(monsterX, monsterY - displayH / 2);
+            ctx.rotate(flipAngle);
+            ctx.drawImage(catFluffyImg, monsterSX, npcSpriteH, npcSpriteW, npcSpriteH, -displayW / 2, -displayH / 2, displayW, displayH);
+            monsterFlipTimer--;
+          } else if (monsterFacingRight) {
             ctx.drawImage(catFluffyImg, monsterSX, npcSpriteH, npcSpriteW, npcSpriteH, monsterX - displayW / 2, monsterY - displayH, displayW, displayH);
           } else {
             ctx.translate(monsterX, monsterY);
@@ -559,6 +613,13 @@ export default function GameCanvas() {
           sp.progress += 0.025;
         }
         sparkles = sparkles.filter(s => s.progress < 1);
+
+        // ── Flying star animations ────────────────────────────────────
+        for (const sf of starFlies) {
+          sf.progress += 0.018;
+        }
+        starFlies = starFlies.filter(sf => sf.progress < 1);
+        drawStarFlyAnimations(ctx, starFlies);
 
         // ── Collect animations ──────────────────────────────────────
         updateCollectAnimations();
