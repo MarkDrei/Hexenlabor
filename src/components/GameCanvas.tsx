@@ -97,10 +97,14 @@ export default function GameCanvas() {
     let brewTimer = 0;
     const BREW_BUBBLE_INTERVAL = 80;
     const BREW_BUBBLE_ACTIVE_WINDOW = 40;
+    // Witch must be within this distance of the cauldron center to start brewing
+    const CAULDRON_BREW_PROXIMITY = 80;
+    let pendingBrew = false;
 
-    // Cauldron position (updated each frame)
+    // Cauldron position (updated each frame; cauldronReady becomes true after first draw)
     let cauldronCenterX = 0;
     let cauldronCenterY = 0;
+    let cauldronReady = false;
 
     const getPointerPos = (e: PointerEvent): Position => {
       const rect = canvas.getBoundingClientRect();
@@ -179,15 +183,13 @@ export default function GameCanvas() {
         return;
       }
 
-      // Check tap on cauldron (start brewing — need at least 3 ingredients that match a recipe)
+      // Check tap on cauldron (walk to cauldron first — brewing starts once the witch arrives)
       if (hutBounds) {
         const distToCauldron = Math.hypot(pos.x - cauldronCenterX, pos.y - cauldronCenterY);
         if (distToCauldron < 100) {
           const recipe = findMatchingRecipe();
           if (recipe) {
-            startBrewing();
-            brewTimer = 0;
-            // Walk to cauldron first
+            pendingBrew = true;
             if (navMesh) {
               const target = navMesh.nearestWalkablePoint({ x: cauldronCenterX, y: cauldronCenterY });
               path = navMesh.findPath({ x, y }, target);
@@ -376,6 +378,7 @@ export default function GameCanvas() {
           ctx.drawImage(thingsImg, cauldronSrc.x, cauldronSrc.y, cauldronSrc.w, cauldronSrc.h, cX, cY, caw, cah);
           cauldronCenterX = cX + caw / 2;
           cauldronCenterY = cY + cah / 2;
+          cauldronReady = true;
 
           // Books on the top floor
           const booksSrc = { x: w * 0.5, y: h * 0.5, w: w * 0.25, h: h * 0.5 };
@@ -440,9 +443,11 @@ export default function GameCanvas() {
             }
           }
 
+          const phaseProgress = (brewTimer % BREW_BUBBLE_INTERVAL) / BREW_BUBBLE_INTERVAL;
           drawBrewingBubbles(
             ctx, cauldronCenterX, cauldronCenterY - 30,
             bs.bubbleIndex, bs.bubbleTimer, bs.bubbleActive, bs.totalBubbles,
+            phaseProgress,
           );
         }
 
@@ -477,6 +482,18 @@ export default function GameCanvas() {
           isMoving = false;
           tickCount = 0;
           frameIndex = 0;
+          // Auto-start brewing when witch arrives near the cauldron
+          if (pendingBrew && cauldronReady) {
+            const distToCauldron = Math.hypot(x - cauldronCenterX, y - cauldronCenterY);
+            if (distToCauldron < CAULDRON_BREW_PROXIMITY) {
+              const recipe = findMatchingRecipe();
+              if (recipe) {
+                startBrewing();
+                brewTimer = 0;
+              }
+            }
+            pendingBrew = false;
+          }
         }
 
         // ── Auto-collect nearby ingredients ──────────────────────────
