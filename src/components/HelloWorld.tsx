@@ -58,10 +58,22 @@ export default function HelloWorld() {
     let pathIndex = 0;
 
     // NPC State
-    let npcX1 = -100;
-    let npcX2 = -300;
     let npcFrameIndex = 0;
     let npcTickCount = 0;
+
+    // Cat state (top floor)
+    let catX = -1;
+    let catTargetX = -1;
+    let catWaitFrames = 0;
+    let catFacingRight = true;
+    const catSpeed = 1;
+
+    // Monster state (middle floor)
+    let monsterX = -1;
+    let monsterTargetX = -1;
+    let monsterWaitFrames = 0;
+    let monsterFacingRight = true;
+    const monsterSpeed = 0.5;
 
     // Helper to get mouse position relative to canvas
     const getMouseCanvasPos = (e: MouseEvent): { x: number; y: number } => {
@@ -117,9 +129,34 @@ export default function HelloWorld() {
         // drawBackground(ctx, canvas.width, canvas.height, time);
 
         // Draw static environment things
-        // if (thingsImg.complete) {
-        //   drawThings(ctx, canvas.width, canvas.height, thingsImg, things2Img);
-        // }
+        if (thingsImg.complete && thingsImg.naturalWidth > 0 && hutImg.complete && hutImg.naturalWidth > 0) {
+          const scale = canvas.height / hutImg.naturalHeight;
+          const drawWidth = hutImg.naturalWidth * scale;
+          const drawX = (canvas.width - drawWidth) / 2;
+          const yOffset = canvas.height * 0.06;
+
+          const w = thingsImg.width;
+          const h = thingsImg.height;
+
+          // Cauldron on the bottom floor
+          const cauldronSrc = { x: w * 0.25, y: h * 0.5, w: w * 0.25, h: h * 0.5 };
+          const caw = cauldronSrc.w * scale * 0.8;
+          const cah = cauldronSrc.h * scale * 0.8;
+          // Center cauldron horizontally in the bottom room roughly
+          const cX = drawX + drawWidth * 0.45 - caw / 2;
+          // Sit on the ground floor level (y = 0.95 * hutH - offset)
+          const cY = canvas.height * 0.95 - yOffset - cah; 
+          ctx.drawImage(thingsImg, cauldronSrc.x, cauldronSrc.y, cauldronSrc.w, cauldronSrc.h, cX, cY, caw, cah);
+
+          // Books on the top floor
+          const booksSrc = { x: w * 0.5, y: h * 0.5, w: w * 0.25, h: h * 0.5 };
+          const bw = booksSrc.w * scale * 0.5;
+          const bh = booksSrc.h * scale * 0.5;
+          const bX = drawX + drawWidth * 0.55 - bw / 2;
+          // Sit on the top floor level (y = 0.48 * hutH - offset)
+          const bY = canvas.height * 0.48 - yOffset - bh;
+          ctx.drawImage(thingsImg, booksSrc.x, booksSrc.y, booksSrc.w, booksSrc.h, bX, bY, bw, bh);
+        }
 
         // Draw walkable navigation shape behind the witch
         if (navMesh) {
@@ -177,31 +214,105 @@ export default function HelloWorld() {
         ctx.restore();
 
         // Draw new NPCs
-        // if (catFluffyImg.complete && catFluffyImg.naturalWidth > 0) {
-        //   const npcSpriteW = catFluffyImg.width / 5;
-        //   const npcSpriteH = catFluffyImg.height / 2;
-        //   const npcY = canvas.height * 0.75; // Walk along the bottom 1/4
+        if (catFluffyImg.complete && catFluffyImg.naturalWidth > 0 && hutImg.complete && hutImg.naturalWidth > 0) {
+          const scale = canvas.height / hutImg.naturalHeight;
+          const drawWidth = hutImg.naturalWidth * scale;
+          const drawX = (canvas.width - drawWidth) / 2;
+          const yOffset = canvas.height * 0.06;
 
-        //   npcX1 += 2;
-        //   npcX2 += 2;
-        //   
-        //   if (npcX1 > canvas.width + 200) npcX1 = -200;
-        //   if (npcX2 > canvas.width + 200) npcX2 = -200;
+          const npcSpriteW = catFluffyImg.width / 5;
+          const npcSpriteH = catFluffyImg.height / 2;
+          // Scale to fit logically
+          const displayW = npcSpriteW * scale * 0.5;
+          const displayH = npcSpriteH * scale * 0.5;
 
-        //   npcTickCount++;
-        //   if (npcTickCount > 8) {
-        //     npcTickCount = 0;
-        //     npcFrameIndex = (npcFrameIndex + 1) % 5;
-        //   }
+          // Helper to get random X on a given floor range
+          const getRandomX = (minPCT: number, maxPCT: number) => {
+            return drawX + drawWidth * (minPCT + Math.random() * (maxPCT - minPCT));
+          };
 
-        //   const npcSX = npcFrameIndex * npcSpriteW;
-        //   
-        //   // Draw Cat (Top Row)
-        //   ctx.drawImage(catFluffyImg, npcSX, 0, npcSpriteW, npcSpriteH, npcX1 - npcSpriteW / 2, npcY - npcSpriteH, npcSpriteW, npcSpriteH);
-        //   
-        //   // Draw Monster (Bottom Row)
-        //   ctx.drawImage(catFluffyImg, npcSX, npcSpriteH, npcSpriteW, npcSpriteH, npcX2 - npcSpriteW / 2, npcY - npcSpriteH + 50, npcSpriteW, npcSpriteH);
-        // }
+          // Cat logic (top floor, pct: 0.2 to 0.7)
+          if (catX === -1) {
+            catX = getRandomX(0.2, 0.7);
+            catTargetX = catX;
+          }
+          if (catWaitFrames > 0) {
+            catWaitFrames--;
+          } else {
+            const dx = catTargetX - catX;
+            if (Math.abs(dx) <= catSpeed) {
+              catX = catTargetX;
+              // Reached target, wait a bit and pick a new one
+              catWaitFrames = 60 + Math.random() * 120;
+              catTargetX = getRandomX(0.2, 0.7);
+              catFacingRight = catTargetX > catX;
+            } else {
+              catX += Math.sign(dx) * catSpeed;
+            }
+          }
+
+          // Monster logic (middle floor, pct: 0.25 to 0.65)
+          if (monsterX === -1) {
+            monsterX = getRandomX(0.25, 0.65);
+            monsterTargetX = monsterX;
+          }
+          if (monsterWaitFrames > 0) {
+            monsterWaitFrames--;
+          } else {
+            const dx = monsterTargetX - monsterX;
+            if (Math.abs(dx) <= monsterSpeed) {
+              monsterX = monsterTargetX;
+              // Reached target, pick a new one
+              monsterWaitFrames = 100 + Math.random() * 200;
+              monsterTargetX = getRandomX(0.25, 0.65);
+              monsterFacingRight = monsterTargetX > monsterX;
+            } else {
+              monsterX += Math.sign(dx) * monsterSpeed;
+            }
+          }
+
+          // Update shared animation frames when walking
+          if (catWaitFrames === 0 || monsterWaitFrames === 0) {
+            npcTickCount++;
+            if (npcTickCount > 10) {
+              npcTickCount = 0;
+              npcFrameIndex = (npcFrameIndex + 1) % 5;
+            }
+          }
+
+          const catAnimIndex = catWaitFrames > 0 ? 0 : npcFrameIndex;
+          const monsterAnimIndex = monsterWaitFrames > 0 ? 0 : npcFrameIndex;
+
+          const catSX = catAnimIndex * npcSpriteW;
+          const monsterSX = monsterAnimIndex * npcSpriteW;
+
+          const catY = canvas.height * 0.48 - yOffset; // Bottom of upper floor
+          const monsterY = canvas.height * 0.66 - yOffset; // Bottom of middle floor
+
+          // Draw Cat (Top Row of sprite)
+          ctx.save();
+          if (catFacingRight) {
+            // Cat image faces right naturally
+            ctx.drawImage(catFluffyImg, catSX, 0, npcSpriteW, npcSpriteH, catX - displayW / 2, catY - displayH, displayW, displayH);
+          } else {
+            ctx.translate(catX, catY);
+            ctx.scale(-1, 1);
+            ctx.drawImage(catFluffyImg, catSX, 0, npcSpriteW, npcSpriteH, -displayW / 2, -displayH, displayW, displayH);
+          }
+          ctx.restore();
+
+          // Draw Fluffy Monster (Bottom Row of sprite)
+          ctx.save();
+          if (monsterFacingRight) {
+            // Monster image faces right naturally
+            ctx.drawImage(catFluffyImg, monsterSX, npcSpriteH, npcSpriteW, npcSpriteH, monsterX - displayW / 2, monsterY - displayH, displayW, displayH);
+          } else {
+            ctx.translate(monsterX, monsterY);
+            ctx.scale(-1, 1);
+            ctx.drawImage(catFluffyImg, monsterSX, npcSpriteH, npcSpriteW, npcSpriteH, -displayW / 2, -displayH, displayW, displayH);
+          }
+          ctx.restore();
+        }
 
         animationFrameId = requestAnimationFrame(render);
       };
