@@ -393,3 +393,65 @@ export function createWitchNavMesh(
     bottomRect,
   ]);
 }
+
+// ─── Factory for the hut's walkable area ─────────────────────────────────────
+
+/**
+ * Create the navigation mesh for the hut image.
+ * Uses proportional coordinates matching the 3 floors and 2 spiral stairs.
+ */
+export function createHutNavMesh(
+  hutX: number,
+  hutY: number,
+  hutW: number,
+  hutH: number,
+): NavigationMesh {
+  // Offset to move the whole path up to align with the drawing
+  const yOffset = hutH * 0.09;
+
+  // Ground Floor
+  const groundFloor = makeRect(
+    hutX + hutW * 0.15,
+    (hutY + hutH * 0.85) - yOffset,
+    hutW * 0.75,
+    hutH * 0.10
+  );
+
+  // Middle Floor
+  const middleFloor = makeRect(
+    hutX + hutW * 0.18,
+    (hutY + hutH * 0.58) - yOffset,
+    hutW * 0.70,
+    hutH * 0.08
+  );
+
+  // Top Floor
+  const topFloor = makeRect(
+    hutX + hutW * 0.18,
+    (hutY + hutH * 0.40) - yOffset,
+    hutW * 0.65,
+    hutH * 0.08
+  );
+
+  // Stairs1 (Ground to Middle)
+  const stairs1 = makeDiagBand(
+    hutX + hutW * 0.80, (hutY + hutH * 0.88) - yOffset,
+    hutX + hutW * 0.75, (hutY + hutH * 0.60) - yOffset,
+    hutW * 0.06
+  );
+
+  // Stairs2 (Middle to Top)
+  const stairs2 = makeDiagBand(
+    hutX + hutW * 0.75, (hutY + hutH * 0.60) - yOffset,
+    hutX + hutW * 0.70, (hutY + hutH * 0.42) - yOffset,
+    hutW * 0.06
+  );
+
+  return new NavigationMesh([
+    groundFloor,
+    middleFloor,
+    topFloor,
+    stairs1,
+    stairs2
+  ]);
+}

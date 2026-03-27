@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 // import { drawBackground } from '@/renderers/background';
 // import { drawThings } from '@/renderers/things';
-import { NavigationMesh, createWitchNavMesh } from '@/game/navigation';
+import { NavigationMesh, createHutNavMesh } from '@/game/navigation';
 import { Position } from '@/shared/types';
 
 export default function HelloWorld() {
@@ -17,18 +17,30 @@ export default function HelloWorld() {
     if (!ctx) return;
 
     // Full screen minus a small gap
-    let navMesh!: NavigationMesh;
+    let navMesh: NavigationMesh | null = null;
+
+    const hutImg = new Image();
+    hutImg.src = '/assets/hut.png';
 
     const updateCanvasSize = () => {
       canvas.width = window.innerWidth - 40;
       canvas.height = window.innerHeight - 40;
-      navMesh = createWitchNavMesh(canvas.width, canvas.height);
+      
+      if (hutImg.complete && hutImg.naturalWidth > 0) {
+        const scale = canvas.height / hutImg.naturalHeight;
+        const drawWidth = hutImg.naturalWidth * scale;
+        const drawX = (canvas.width - drawWidth) / 2;
+        navMesh = createHutNavMesh(drawX, 0, drawWidth, canvas.height);
+      }
     };
+    
+    // We will update canvas size right away, but mesh will wait for hutImg
     updateCanvasSize();
+    hutImg.onload = updateCanvasSize;
     window.addEventListener('resize', updateCanvasSize);
 
     let animationFrameId: number;
-    // Initial position in centre (lies on the X crossing)
+    // Initial position in centre
     let x = canvas.width / 2;
     let y = canvas.height / 2;
 
@@ -62,6 +74,7 @@ export default function HelloWorld() {
 
     // On click: compute A* path to the nearest walkable point
     const handleMouseDown = (e: MouseEvent) => {
+      if (!navMesh) return;
       const pos = getMouseCanvasPos(e);
       const target = navMesh.nearestWalkablePoint(pos);
       path = navMesh.findPath({ x, y }, target);
@@ -78,9 +91,6 @@ export default function HelloWorld() {
 
     const catFluffyImg = new Image();
     catFluffyImg.src = '/assets/catFluffy.png';
-
-    const hutImg = new Image();
-    hutImg.src = '/assets/hut.png';
 
     const img = new Image();
     img.src = '/assets/witch.png';
@@ -112,7 +122,9 @@ export default function HelloWorld() {
         // }
 
         // Draw walkable navigation shape behind the witch
-        navMesh.debugDraw(ctx);
+        if (navMesh) {
+          navMesh.debugDraw(ctx);
+        }
 
         // ── Update witch movement along the A* path ──────────────────────
         if (pathIndex < path.length) {
