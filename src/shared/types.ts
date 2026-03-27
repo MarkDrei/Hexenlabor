@@ -108,6 +108,7 @@ export interface GameState {
   level: number;
   inventory: { type: IngredientType; count: number }[];
   brewedPotion: Recipe | null;
+  selectedRecipe: Recipe | null;
   activeOrders: Order[];
   ingredients: Ingredient[];
   phase: GamePhase;
