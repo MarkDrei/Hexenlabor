@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { drawBackground } from '@/renderers/background';
-import { drawThings } from '@/renderers/things';
+// import { drawBackground } from '@/renderers/background';
+// import { drawThings } from '@/renderers/things';
 import { NavigationMesh, createWitchNavMesh } from '@/game/navigation';
 import { Position } from '@/shared/types';
 
@@ -79,6 +79,9 @@ export default function HelloWorld() {
     const catFluffyImg = new Image();
     catFluffyImg.src = '/assets/catFluffy.png';
 
+    const hutImg = new Image();
+    hutImg.src = '/assets/hut.png';
+
     const img = new Image();
     img.src = '/assets/witch.png';
     img.onload = () => {
@@ -91,13 +94,22 @@ export default function HelloWorld() {
         // Witch display size: 15% of current canvas height, proportional width
         const displayHeight = canvas.height * 0.15;
         const displayWidth = displayHeight * spriteAspect;
-        // Draw magical background instead of clearing
-        drawBackground(ctx, canvas.width, canvas.height, time);
-        
-        // Draw static environment things
-        if (thingsImg.complete) {
-          drawThings(ctx, canvas.width, canvas.height, thingsImg, things2Img);
+        // Draw hut as background scaled to full height
+        if (hutImg.complete && hutImg.naturalWidth > 0) {
+          const scale = canvas.height / hutImg.naturalHeight;
+          const drawWidth = hutImg.naturalWidth * scale;
+          const drawX = (canvas.width - drawWidth) / 2;
+          ctx.drawImage(hutImg, drawX, 0, drawWidth, canvas.height);
+        } else {
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
+        // drawBackground(ctx, canvas.width, canvas.height, time);
+
+        // Draw static environment things
+        // if (thingsImg.complete) {
+        //   drawThings(ctx, canvas.width, canvas.height, thingsImg, things2Img);
+        // }
 
         // Draw walkable navigation shape behind the witch
         navMesh.debugDraw(ctx);
@@ -153,31 +165,31 @@ export default function HelloWorld() {
         ctx.restore();
 
         // Draw new NPCs
-        if (catFluffyImg.complete && catFluffyImg.naturalWidth > 0) {
-          const npcSpriteW = catFluffyImg.width / 5;
-          const npcSpriteH = catFluffyImg.height / 2;
-          const npcY = canvas.height * 0.75; // Walk along the bottom 1/4
+        // if (catFluffyImg.complete && catFluffyImg.naturalWidth > 0) {
+        //   const npcSpriteW = catFluffyImg.width / 5;
+        //   const npcSpriteH = catFluffyImg.height / 2;
+        //   const npcY = canvas.height * 0.75; // Walk along the bottom 1/4
 
-          npcX1 += 2;
-          npcX2 += 2;
-          
-          if (npcX1 > canvas.width + 200) npcX1 = -200;
-          if (npcX2 > canvas.width + 200) npcX2 = -200;
+        //   npcX1 += 2;
+        //   npcX2 += 2;
+        //   
+        //   if (npcX1 > canvas.width + 200) npcX1 = -200;
+        //   if (npcX2 > canvas.width + 200) npcX2 = -200;
 
-          npcTickCount++;
-          if (npcTickCount > 8) {
-            npcTickCount = 0;
-            npcFrameIndex = (npcFrameIndex + 1) % 5;
-          }
+        //   npcTickCount++;
+        //   if (npcTickCount > 8) {
+        //     npcTickCount = 0;
+        //     npcFrameIndex = (npcFrameIndex + 1) % 5;
+        //   }
 
-          const npcSX = npcFrameIndex * npcSpriteW;
-          
-          // Draw Cat (Top Row)
-          ctx.drawImage(catFluffyImg, npcSX, 0, npcSpriteW, npcSpriteH, npcX1 - npcSpriteW / 2, npcY - npcSpriteH, npcSpriteW, npcSpriteH);
-          
-          // Draw Monster (Bottom Row)
-          ctx.drawImage(catFluffyImg, npcSX, npcSpriteH, npcSpriteW, npcSpriteH, npcX2 - npcSpriteW / 2, npcY - npcSpriteH + 50, npcSpriteW, npcSpriteH);
-        }
+        //   const npcSX = npcFrameIndex * npcSpriteW;
+        //   
+        //   // Draw Cat (Top Row)
+        //   ctx.drawImage(catFluffyImg, npcSX, 0, npcSpriteW, npcSpriteH, npcX1 - npcSpriteW / 2, npcY - npcSpriteH, npcSpriteW, npcSpriteH);
+        //   
+        //   // Draw Monster (Bottom Row)
+        //   ctx.drawImage(catFluffyImg, npcSX, npcSpriteH, npcSpriteW, npcSpriteH, npcX2 - npcSpriteW / 2, npcY - npcSpriteH + 50, npcSpriteW, npcSpriteH);
+        // }
 
         animationFrameId = requestAnimationFrame(render);
       };
