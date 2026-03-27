@@ -258,13 +258,13 @@ export function drawSpeechBubble(
   ctx.restore();
 }
 
-/** Draw recipe book overlay */
+/** Draw recipe book overlay. Returns hit-boxes for each recipe card (in recipe order). */
 function drawRecipeBook(
   ctx: CanvasRenderingContext2D,
   canvasWidth: number,
   canvasHeight: number,
-  _state: GameState,
-): void {
+  state: GameState,
+): { x: number; y: number; w: number; h: number }[] {
   ctx.save();
 
   // Dark overlay
@@ -293,6 +293,8 @@ function drawRecipeBook(
   ctx.fillText('📖 Rezeptbuch', canvasWidth / 2, 54);
   ctx.shadowBlur = 0;
 
+  const slots: { x: number; y: number; w: number; h: number }[] = [];
+
   for (let i = 0; i < recipes.length; i++) {
     const r = recipes[i];
     const col = i % cols;
@@ -300,12 +302,21 @@ function drawRecipeBook(
     const rx = startX + col * (cellW + gap);
     const ry = startY + row * (cellH + gap);
     const canBrew = !r.locked && brewable.has(r.id);
+    const isSelected = !r.locked && state.selectedRecipe?.id === r.id;
 
-    // Card background
+    slots.push({ x: rx, y: ry, w: cellW, h: cellH });
+
+    // Card background color based on selection / lock / brewable status
     if (r.locked) {
       ctx.fillStyle = 'rgba(30, 41, 59, 0.5)';
       ctx.strokeStyle = '#334155';
       ctx.lineWidth = 2;
+    } else if (isSelected) {
+      ctx.fillStyle = canBrew ? 'rgba(250, 204, 21, 0.30)' : 'rgba(250, 204, 21, 0.15)';
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 3;
+      ctx.shadowColor = '#facc15';
+      ctx.shadowBlur = 16;
     } else if (canBrew) {
       ctx.fillStyle = 'rgba(16, 185, 129, 0.20)';
       ctx.strokeStyle = '#10b981';
@@ -335,8 +346,14 @@ function drawRecipeBook(
     } else {
       const pad = 12;
 
-      // "Can brew" badge
-      if (canBrew) {
+      // Status badge (top-right corner)
+      if (isSelected) {
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = '#facc15';
+        ctx.fillText(canBrew ? '⭐ AUSGEWÄHLT' : '★ AUSGEWÄHLT', rx + cellW - pad, ry + 8);
+      } else if (canBrew) {
         ctx.font = 'bold 11px sans-serif';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'top';
@@ -395,14 +412,17 @@ function drawRecipeBook(
     }
   }
 
-  // Close hint
-  ctx.font = '15px sans-serif';
+  // Close hint (two lines for narrow screens)
+  ctx.font = '14px sans-serif';
   ctx.fillStyle = '#64748b';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText('Tippe irgendwo zum Schließen', canvasWidth / 2, canvasHeight - 20);
+  ctx.fillText('Tippe auf ein Rezept zum Auswählen', canvasWidth / 2, canvasHeight - 34);
+  ctx.fillText('Tippe daneben zum Schließen', canvasWidth / 2, canvasHeight - 14);
 
   ctx.restore();
+
+  return slots;
 }
 
 /** Draw recipe book button */
@@ -542,6 +562,7 @@ export interface HudLayout {
   recipeBookBtn: { x: number; y: number; w: number; h: number };
   inventorySlots: { x: number; y: number; w: number; h: number }[];
   brewedPotionSlot: { x: number; y: number; w: number; h: number } | null;
+  recipeBookSlots: { x: number; y: number; w: number; h: number }[];
 }
 
 /** Main HUD draw function */
@@ -562,13 +583,14 @@ export function drawHud(
 
   const recipeBookBtn = drawRecipeBookButton(ctx, canvasWidth, canvasHeight, slotSize);
 
+  let recipeBookSlots: { x: number; y: number; w: number; h: number }[] = [];
   if (state.showRecipeBook) {
-    drawRecipeBook(ctx, canvasWidth, canvasHeight, state);
+    recipeBookSlots = drawRecipeBook(ctx, canvasWidth, canvasHeight, state);
   }
 
   if (state.phase === 'celebrating' && state.celebrateTimer > 0) {
     drawCelebration(ctx, canvasWidth, canvasHeight, state.level, state.celebrateTimer);
   }
 
-  return { recipeBookBtn, inventorySlots, brewedPotionSlot };
+  return { recipeBookBtn, inventorySlots, brewedPotionSlot, recipeBookSlots };
 }

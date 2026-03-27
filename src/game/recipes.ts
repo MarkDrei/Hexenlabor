@@ -69,17 +69,32 @@ export const ALL_RECIPES: Recipe[] = [
 ];
 
 /**
- * Look up a recipe that matches the 3 items currently in inventory.
- * Order does not matter.
- */
-/**
  * Find a recipe that can be made from the current inventory.
  * Checks all 3-element subsets of the (up to 5) inventory items.
+ * Prefers the player's selectedRecipe if it is brewable.
  */
 export function findMatchingRecipe(): Recipe | null {
   // Expand stacked inventory to flat type list (one entry per unique type present)
   const inv = gameState.inventory.map(s => s.type);
   if (inv.length < 3) return null;
+
+  // Prefer the selected recipe when it is unlocked and the ingredients are available
+  if (gameState.selectedRecipe) {
+    const selected = gameState.selectedRecipe;
+    if (gameState.unlockedRecipes.includes(selected.id)) {
+      const rSorted = [...selected.ingredients].sort();
+      for (let a = 0; a < inv.length - 2; a++) {
+        for (let b = a + 1; b < inv.length - 1; b++) {
+          for (let c = b + 1; c < inv.length; c++) {
+            const sorted = [inv[a], inv[b], inv[c]].sort();
+            if (sorted[0] === rSorted[0] && sorted[1] === rSorted[1] && sorted[2] === rSorted[2]) {
+              return selected;
+            }
+          }
+        }
+      }
+    }
+  }
 
   for (let a = 0; a < inv.length - 2; a++) {
     for (let b = a + 1; b < inv.length - 1; b++) {

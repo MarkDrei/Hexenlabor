@@ -17,6 +17,7 @@ function createInitialState(): GameState {
     level: 1,
     inventory: [],
     brewedPotion: null,
+    selectedRecipe: null,
     activeOrders: [],
     ingredients: [],
     phase: 'exploring',

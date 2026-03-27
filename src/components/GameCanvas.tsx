@@ -5,7 +5,7 @@ import { NavigationMesh, createHutNavMesh } from '@/game/navigation';
 import { Position, HutBounds, INGREDIENT_EMOJI, INGREDIENT_GLOW_COLOR } from '@/shared/types';
 import { gameState, addToInventory, addStars, setPhase, startBrewing, updateCollectAnimations, addCollectAnimation, completeOrder, getRecipeUnlocks, removeFromInventory } from '@/game/state';
 import { updateIngredients, findNearbyIngredient, removeIngredient } from '@/game/ingredients';
-import { findMatchingRecipe, consumeRecipeIngredients } from '@/game/recipes';
+import { findMatchingRecipe, consumeRecipeIngredients, getAllRecipesForDisplay } from '@/game/recipes';
 import { updateOrders, getOrderForRequester, hasMatchingPotion } from '@/game/orders';
 import { drawIngredientPickup, drawSparkles, drawBrewingBubbles, drawCollectAnimations, drawCandle, drawFloatingSparkles, drawMoonCrescent, drawStarFlyAnimations } from '@/renderers/effects';
 import { drawHud, drawSpeechBubble, HudLayout } from '@/renderers/hud';
@@ -118,6 +118,21 @@ export default function GameCanvas() {
 
       // Immediate tap actions
       if (gameState.showRecipeBook) {
+        // Check if a specific (non-locked) recipe card was tapped
+        if (hudLayout && hudLayout.recipeBookSlots.length > 0) {
+          const recipes = getAllRecipesForDisplay();
+          for (let i = 0; i < hudLayout.recipeBookSlots.length; i++) {
+            const s = hudLayout.recipeBookSlots[i];
+            if (pos.x >= s.x && pos.x <= s.x + s.w && pos.y >= s.y && pos.y <= s.y + s.h) {
+              const r = recipes[i];
+              if (!r.locked) {
+                // Toggle: tapping the already-selected recipe deselects it
+                gameState.selectedRecipe = gameState.selectedRecipe?.id === r.id ? null : r;
+              }
+              break;
+            }
+          }
+        }
         gameState.showRecipeBook = false;
         return;
       }
@@ -281,6 +296,10 @@ export default function GameCanvas() {
         gameState.brewedPotion = recipe;
         consumeRecipeIngredients(recipe);
         getRecipeUnlocks();
+        // Clear the selected recipe once it has been brewed
+        if (gameState.selectedRecipe?.id === recipe.id) {
+          gameState.selectedRecipe = null;
+        }
         // Flying stars from cauldron to star counter
         const numStarFlies = Math.min(starsEarned, 5);
         for (let i = 0; i < numStarFlies; i++) {
