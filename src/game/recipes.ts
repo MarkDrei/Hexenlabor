@@ -115,6 +115,28 @@ export function getUnlockedRecipes(): Recipe[] {
   return ALL_RECIPES.filter(r => gameState.unlockedRecipes.includes(r.id));
 }
 
+/** Returns ids of all recipes that can currently be brewed from the inventory. */
+export function getBrewableRecipeIds(): Set<string> {
+  const inv = gameState.inventory.map(s => s.type);
+  const brewable = new Set<string>();
+  if (inv.length < 3) return brewable;
+  for (let a = 0; a < inv.length - 2; a++) {
+    for (let b = a + 1; b < inv.length - 1; b++) {
+      for (let c = b + 1; c < inv.length; c++) {
+        const sorted = [inv[a], inv[b], inv[c]].sort();
+        for (const recipe of ALL_RECIPES) {
+          if (!gameState.unlockedRecipes.includes(recipe.id)) continue;
+          const rSorted = [...recipe.ingredients].sort();
+          if (sorted[0] === rSorted[0] && sorted[1] === rSorted[1] && sorted[2] === rSorted[2]) {
+            brewable.add(recipe.id);
+          }
+        }
+      }
+    }
+  }
+  return brewable;
+}
+
 export function getAllRecipesForDisplay(): (Recipe & { locked: boolean })[] {
   return ALL_RECIPES.map(r => ({
     ...r,

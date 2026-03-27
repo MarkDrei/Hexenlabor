@@ -124,6 +124,13 @@ export default function GameCanvas() {
           return;
         }
 
+        // Tap on brewed potion slot to discard
+        const ps = hudLayout.brewedPotionSlot;
+        if (ps && pos.x >= ps.x && pos.x <= ps.x + ps.w && pos.y >= ps.y && pos.y <= ps.y + ps.h) {
+          gameState.brewedPotion = null;
+          return;
+        }
+
         // Tap on inventory slot to discard (decrement stack by 1)
         for (let i = 0; i < hudLayout.inventorySlots.length; i++) {
           const s = hudLayout.inventorySlots[i];
@@ -152,7 +159,7 @@ export default function GameCanvas() {
       // Check tap on cauldron (start brewing — need at least 3 ingredients that match a recipe)
       if (hutBounds) {
         const distToCauldron = Math.hypot(pos.x - cauldronCenterX, pos.y - cauldronCenterY);
-        if (distToCauldron < 50) {
+        if (distToCauldron < 100) {
           const recipe = findMatchingRecipe();
           if (recipe) {
             startBrewing();
