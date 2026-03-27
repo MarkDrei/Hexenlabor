@@ -8,7 +8,7 @@ const ORDER_INTERVAL_MIN = 60 * 30; // ~30 seconds
 const ORDER_INTERVAL_MAX = 60 * 60; // ~60 seconds
 let nextSpawnAt = ORDER_INTERVAL_MIN;
 
-const REQUESTERS: Requester[] = ['cat', 'monster', 'visitor'];
+const REQUESTERS: Requester[] = ['cat', 'monster'];
 
 export function updateOrders(): void {
   if (gameState.phase !== 'exploring') return;

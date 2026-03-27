@@ -1,200 +1,166 @@
 # Das funkelnde Hexenlabor ✨
 
-A magical game engine built with Next.js 15, TypeScript, React, and HTML5 Canvas.
+A casual browser game for kids built with Next.js 15, TypeScript, React, and HTML5 Canvas. Run a magical witch's laboratory: collect ingredients, brew potions, and deliver them to your pets!
 
-## Project Overview
+## Gameplay
 
-Das funkelnde Hexenlabor is a full-stack game engine combining:
+You are the **witch** in her three-floor hut. Tap anywhere to move, automatically collect ingredients you walk over, brew potions at the cauldron, and deliver them to the cat 🐱 or the monster 👾.
 
-- **Frontend**: React components with Canvas rendering
-- **Backend**: Next.js API routes with iron-session authentication
-- **Shared**: TypeScript types and utilities for type-safe full-stack development
-- **Testing**: Vitest for unit and integration tests
+### Controls
+
+| Action | How |
+|---|---|
+| Move witch | Tap anywhere on screen |
+| Collect ingredient | Walk over it — auto-picked up |
+| Brew potion | Tap the cauldron (need 3 matching ingredients) |
+| Discard ingredient | Tap an inventory slot (top-right) |
+| Pet an NPC | Long-press on cat or monster |
+| Deliver potion | Long-press on the NPC that ordered it |
+
+### HUD at a glance
+
+| Area | Meaning |
+|---|---|
+| ⭐ `1234` top-left | Your star count |
+| `Lv.3` below stars | Current level |
+| 8 slots top-right | Inventory — same types stack, number shows count |
+| Pink slot (right of inventory) | Brewed potion ready to deliver |
+| Bottom center | Active orders, e.g. `🐱 → 💜` = cat wants a sleep potion |
+| 📖 bottom-right | Recipe book (🔒 = not yet unlocked) |
+
+### Ingredients & Floors
+
+| Floor | Ingredients |
+|---|---|
+| Ground | 🫐 Zauberbeerle (common), 🕯️ Kerze (uncommon) |
+| Middle | 🌿 Hexenkraut (common), 🍄 Fliegenpilz (uncommon) |
+| Top | 💎 Mondkristall (rare), 🌙 Mondstein (rare), ⭐ Stern (rare), 🦋 Schmetterling (epic) |
+
+### Recipes (8 total, unlocked by level)
+
+| Potion | Emoji | Ingredients | Stars | Level |
+|---|---|---|---|---|
+| Heiltrank | 💚 | Hexenkraut + Zauberbeerle + Mondkristall | 10 | 1 |
+| Schlaftrank | 💜 | Hexenkraut + Mondstein + Zauberbeerle | 15 | 1 |
+| Liebestrank | 💕 | Mondstein + Fliegenpilz + Stern | 20 | 2 |
+| Feuertrank | 🔥 | Kerze + Fliegenpilz + Stern | 25 | 3 |
+| Sternenstaub | ✨ | Stern + Mondkristall + Schmetterling | 30 | 4 |
+| Mondtrank | 🌕 | Mondstein + Mondkristall + Kerze | 30 | 4 |
+| Regenbogentrank | 🌈 | Mondkristall + Schmetterling + Stern | 50 | 5 |
+| Ewigkeitstrank | ♾️ | Schmetterling + Mondstein + Hexenkraut | 50 | 5 |
+
+### Brewing mini-game
+
+Tap the bubbles that appear — each hit multiplies your star reward!
+
+---
 
 ## Tech Stack
 
 ### Framework & Language
 
-- **Next.js 15** - React framework with App Router
-- **TypeScript** - Full-stack type safety (ES Modules only)
-- **React 19** - UI component library
+- **Next.js 15** — React framework with App Router
+- **TypeScript** — Full-stack type safety (ES Modules only)
+- **React 19** — UI component library
 
 ### Frontend
 
-- **React Hooks** - State and side-effect management
-- **HTML5 Canvas** - Game rendering engine
-- **Tailwind CSS** - Utility-first styling
-- **Custom Game Engine** - Core game logic in `/src/game`
+- **HTML5 Canvas** — All game rendering via `requestAnimationFrame`
+- **Pointer Events API** — Unified touch + mouse input
+- **Tailwind CSS** — Utility-first styling
+- **Custom game systems** — Navigation, ingredients, recipes, orders, HUD, effects
 
 ### Backend
 
-- **Next.js API Routes** - Located in `/src/app/api`
-- **iron-session** - HTTP-only cookie session management
-- **Shared Types** - TypeScript types in `/src/shared`
+- **Next.js API Routes** — `/src/app/api/scores` for highscores
+- **iron-session** — HTTP-only cookie sessions
 
-### Development & Testing
+### Testing
 
-- **Vitest** - Fast unit and integration testing
-- **TypeScript** - Compile-time type safety
-- **Tailwind CSS** - Responsive design
+- **Vitest** — Unit and integration tests (18 tests)
+
+---
 
 ## Project Structure
 
 ```
 src/
 ├── app/
-│   ├── api/              # Next.js API routes
-│   ├── layout.tsx        # Root layout component
-│   ├── page.tsx          # Home page
-│   └── globals.css       # Global styles with Tailwind
-├── components/           # React components
-├── game/                 # Game engine logic
-├── renderers/            # Canvas rendering utilities
-└── shared/               # Shared types and utilities
+│   ├── api/scores/       # Highscore GET/POST endpoint
+│   ├── layout.tsx
+│   ├── page.tsx          # Renders <GameCanvas />
+│   └── globals.css
+├── components/
+│   └── GameCanvas.tsx    # Main game loop, input, rendering
+├── game/
+│   ├── engine.ts         # (legacy stub)
+│   ├── navigation.ts     # NavigationMesh + A* + createHutNavMesh()
+│   ├── state.ts          # GameState singleton + mutation functions
+│   ├── ingredients.ts    # Ingredient spawning & collection
+│   ├── recipes.ts        # Recipe definitions + matching + consumption
+│   └── orders.ts         # NPC order spawning & delivery
+├── renderers/
+│   ├── hud.ts            # HUD: stars, inventory, orders, recipe book
+│   ├── effects.ts        # Sparkles, glow, brewing bubbles, candles
+│   └── index.ts          # Renderer interface
+└── shared/
+    └── types.ts          # All shared types and enums
 
-tests/                     # Test files
-public/                    # Static assets
+tests/
+public/assets/            # hut.png, witch.png, catFluffy.png, …
 ```
+
+---
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ (with npm or pnpm)
-- Git
+- Node.js 18+
 
 ### Installation
 
-1. Navigate to the project directory:
-```bash
-cd Hexenlabor
-```
-
-2. Install dependencies:
 ```bash
 npm install
-```
-
-3. Create a `.env.local` file from the template:
-```bash
 cp .env.example .env.local
 ```
 
 ### Development
 
-Start the development server:
-
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser. The page will auto-reload on code changes.
+Open [http://localhost:3000](http://localhost:3000).
 
-### Build for Production
+### Production build
 
 ```bash
 npm run build
 npm run start
 ```
 
-### Testing
-
-Run tests with Vitest:
+### Tests
 
 ```bash
-npm test
+npm test          # watch mode
+npm run test:ui   # Vitest UI
 ```
 
-Run tests with UI:
-
-```bash
-npm run test:ui
-```
+---
 
 ## Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run lint` - Run ESLint
-- `npm test` - Run test suite
-- `npm run test:ui` - Run tests with UI
+| Script | Purpose |
+|---|---|
+| `npm run dev` | Start dev server |
+| `npm run build` | Build for production |
+| `npm run start` | Run production build |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest (watch) |
+| `npm run test:ui` | Vitest UI |
 
-## Development Guidelines
-
-### TypeScript
-
-This project uses **ES Modules only**. All imports must use the `.ts`/`.tsx` extensions:
-
-```typescript
-import { Component } from '@/components/Component.ts';
-```
-
-### Path Aliases
-
-Use path aliases defined in `tsconfig.json`:
-
-- `@/*` - Src directory
-- `@/components/*` - Components
-- `@/game/*` - Game engine
-- `@/renderers/*` - Rendering utilities
-- `@/shared/*` - Shared types and utilities
-
-### Styling
-
-Use Tailwind CSS for styling. Global styles are defined in `src/app/globals.css`.
-
-```tsx
-<div className="flex items-center justify-center bg-slate-900">
-  Canvas Game
-</div>
-```
-
-### Component Patterns
-
-Use React hooks for state management:
-
-```typescript
-'use client';
-
-import { useState, useEffect } from 'react';
-
-export default function GameComponent() {
-  const [gameState, setGameState] = useState(null);
-
-  useEffect(() => {
-    // Setup game
-  }, []);
-
-  return <canvas ref={canvasRef} />;
-}
-```
-
-## API Routes
-
-API routes are located in `src/app/api/` and use the Next.js 15 App Router pattern:
-
-```typescript
-// src/app/api/game/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-
-export async function POST(request: NextRequest) {
-  return NextResponse.json({ success: true });
-}
-```
-
-## Authentication
-
-Session management is handled with `iron-session`. Implement protected routes using:
-
-```typescript
-import { getSession } from '@/lib/session.ts';
-
-export async function GET(request: NextRequest) {
-  const session = await getSession();
-  // Use session data
-}
-```
+---
 
 ## Deployment on Render
 
@@ -202,62 +168,22 @@ The project includes a [`render.yaml`](render.yaml) for one-click deployment via
 
 ### Quick Deploy
 
-1. Push the repository to GitHub (or GitLab).
-2. Go to [dashboard.render.com](https://dashboard.render.com) and click **New → Blueprint**.
-3. Connect your repository — Render will detect `render.yaml` automatically.
-4. Review the service settings and click **Apply**.
-
-Render will:
-- Install dependencies with `npm ci`
-- Build the app with `npm run build`
-- Start the server with `npm run start`
+1. Push the repository to GitHub.
+2. Go to [dashboard.render.com](https://dashboard.render.com) → **New → Blueprint**.
+3. Connect your repository — Render detects `render.yaml` automatically.
+4. Review and click **Apply**.
 
 ### Environment Variables
 
 | Variable | Required | Description |
 |---|---|---|
-| `NODE_ENV` | Yes | Set to `production` (pre-configured in `render.yaml`) |
-| `SECRET_COOKIE_PASSWORD` | Yes | 32-character secret for iron-session cookie encryption — auto-generated by Render |
-
-To rotate the cookie secret, update `SECRET_COOKIE_PASSWORD` in the Render dashboard under **Environment → Secret Files**.
-
-### Manual Service Setup (without Blueprint)
-
-If you prefer to configure the service manually in the Render dashboard:
-
-1. **New → Web Service** → connect your repository.
-2. **Runtime**: Node
-3. **Build Command**: `npm ci && npm run build`
-4. **Start Command**: `npm run start`
-5. **Node Version**: 20
-6. Add the environment variables from the table above.
-
-### Notes
-
-- The free Render tier spins down instances after inactivity; the first request after a spin-down will be slow.
-- Next.js reads the `PORT` environment variable injected by Render automatically.
+| `NODE_ENV` | Yes | `production` (pre-configured in `render.yaml`) |
+| `SECRET_COOKIE_PASSWORD` | Yes | 32-char secret for iron-session — auto-generated by Render |
 
 ---
-
-## Future Enhancements
-
-- [ ] Database schema (PostgreSQL) - schema-first approach
-- [ ] Advanced rendering with multiple Canvas renderers
-- [ ] Game state management system
-- [ ] Type-safe lock system for concurrency
-- [ ] In-memory caching with persistence
 
 ## License
 
 MIT
 
-## Contributing
-
-1. Create a feature branch
-2. Make your changes
-3. Run tests: `npm test`
-4. Submit a pull request
-
----
-
-✨ Happy coding in Das funkelnde Hexenlabor! ✨
+✨ Happy brewing! ✨
