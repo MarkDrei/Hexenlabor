@@ -298,10 +298,8 @@ export default function GameCanvas() {
         gameState.brewedPotion = recipe;
         consumeRecipeIngredients(recipe);
         getRecipeUnlocks();
-        // Clear the selected recipe once it has been brewed
-        if (gameState.selectedRecipe?.id === recipe.id) {
-          gameState.selectedRecipe = null;
-        }
+        // Always reset the selected recipe after brewing
+        gameState.selectedRecipe = null;
         // Flying stars from cauldron to star counter
         const numStarFlies = Math.min(starsEarned, 5);
         for (let i = 0; i < numStarFlies; i++) {
