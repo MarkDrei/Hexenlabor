@@ -104,7 +104,7 @@ export function setPhase(phase: GamePhase): void {
   gameState.phase = phase;
 }
 
-export function startBrewing(): void {
+export function startBrewing(recipeId: string): void {
   gameState.phase = 'brewing';
   gameState.brewingState = {
     bubbleIndex: 0,
@@ -112,6 +112,7 @@ export function startBrewing(): void {
     bubbleActive: false,
     hits: 0,
     totalBubbles: 3,
+    recipeId,
   };
 }
 

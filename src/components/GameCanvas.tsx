@@ -447,7 +447,7 @@ export default function GameCanvas() {
           drawBrewingBubbles(
             ctx, cauldronCenterX, cauldronCenterY - 30,
             bs.bubbleIndex, bs.bubbleTimer, bs.bubbleActive, bs.totalBubbles,
-            phaseProgress,
+            phaseProgress, bs.recipeId, brewTimer,
           );
         }
 
@@ -488,7 +488,7 @@ export default function GameCanvas() {
             if (distToCauldron < CAULDRON_BREW_PROXIMITY) {
               const recipe = findMatchingRecipe();
               if (recipe) {
-                startBrewing();
+                startBrewing(recipe.id);
                 brewTimer = 0;
               }
             }
