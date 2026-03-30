@@ -91,6 +91,7 @@ export interface BrewingState {
   bubbleActive: boolean;
   hits: number;
   totalBubbles: number;
+  recipeId: string;
 }
 
 export interface CollectAnimation {

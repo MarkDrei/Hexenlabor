@@ -298,10 +298,8 @@ export default function GameCanvas() {
         gameState.brewedPotion = recipe;
         consumeRecipeIngredients(recipe);
         getRecipeUnlocks();
-        // Clear the selected recipe once it has been brewed
-        if (gameState.selectedRecipe?.id === recipe.id) {
-          gameState.selectedRecipe = null;
-        }
+        // Always reset the selected recipe after brewing
+        gameState.selectedRecipe = null;
         // Flying stars from cauldron to star counter
         const numStarFlies = Math.min(starsEarned, 5);
         for (let i = 0; i < numStarFlies; i++) {
@@ -447,7 +445,7 @@ export default function GameCanvas() {
           drawBrewingBubbles(
             ctx, cauldronCenterX, cauldronCenterY - 30,
             bs.bubbleIndex, bs.bubbleTimer, bs.bubbleActive, bs.totalBubbles,
-            phaseProgress,
+            phaseProgress, bs.recipeId, brewTimer,
           );
         }
 
@@ -488,7 +486,7 @@ export default function GameCanvas() {
             if (distToCauldron < CAULDRON_BREW_PROXIMITY) {
               const recipe = findMatchingRecipe();
               if (recipe) {
-                startBrewing();
+                startBrewing(recipe.id);
                 brewTimer = 0;
               }
             }

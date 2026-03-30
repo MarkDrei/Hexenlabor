@@ -82,8 +82,30 @@ export function drawSparkles(
   ctx.restore();
 }
 
+/** Per-recipe potion colours used during brewing. */
+const POTION_COLORS: Record<string, string> = {
+  heiltrank:       '#22c55e',
+  schlaftrank:     '#a78bfa',
+  liebestrank:     '#ec4899',
+  feuertrank:      '#f97316',
+  sternenstaub:    '#facc15',
+  mondtrank:       '#f59e0b',
+  regenbogentrank: '#ffffff', // placeholder – handled separately
+  ewigkeitstrank:  '#06b6d4',
+};
+
+const RAINBOW_COLORS = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
+
+function getPotionColor(recipeId: string, index = 0): string {
+  if (recipeId === 'regenbogentrank') {
+    return RAINBOW_COLORS[index % RAINBOW_COLORS.length];
+  }
+  return POTION_COLORS[recipeId] ?? '#a78bfa';
+}
+
 /** Draw brewing bubbles above the cauldron.
- *  Each bubble rises from the cauldron and grows in size as phaseProgress (0–1) advances.
+ *  Small cosmetic bubbles rise continuously (colored per recipe).
+ *  One large interactive bubble grows and rises per brew step.
  */
 export function drawBrewingBubbles(
   ctx: CanvasRenderingContext2D,
@@ -94,27 +116,53 @@ export function drawBrewingBubbles(
   bubbleActive: boolean,
   totalBubbles: number,
   phaseProgress: number,
+  recipeId: string,
+  time: number,
 ): void {
-  const colors = ['#a78bfa', '#ec4899', '#22c55e'];
   const MAX_RISE = 130;
-  const MIN_SIZE = 6;
-  const MAX_SIZE = 26;
+  const MIN_SIZE = 12;
+  const MAX_SIZE = 55;
   const DOT_SPACING = 18;
   const DOT_Y_OFFSET = 22;
+  const isRainbow = recipeId === 'regenbogentrank';
 
-  // Progress dots below the cauldron to show remaining bubbles
+  // ── Small cosmetic bubbles ────────────────────────────────────────────
+  const SMALL_COUNT = 12;
+  const SMALL_PERIOD = 70; // frames (brewTimer ticks) per full rise cycle per bubble
+  for (let i = 0; i < SMALL_COUNT; i++) {
+    const phaseOffset = (i * SMALL_PERIOD) / SMALL_COUNT;
+    const progress = ((time + phaseOffset) % SMALL_PERIOD) / SMALL_PERIOD;
+    const xOff = ((i * 137 + 23) % 50) - 25; // prime-based spread for good distribution ±25 px
+    const riseY = cauldronY - progress * 90;
+    const r = 2.5 + ((i * 13 + 7) % 4); // 2.5–5.5 px
+    const alpha = Math.sin(progress * Math.PI) * 0.75;
+    const color = isRainbow ? RAINBOW_COLORS[i % RAINBOW_COLORS.length] : getPotionColor(recipeId);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.arc(cauldronX + xOff, riseY, r, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 5;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ── Progress dots below the cauldron ─────────────────────────────────
   const dotsStartX = cauldronX - ((totalBubbles - 1) * DOT_SPACING) / 2;
   for (let i = 0; i < totalBubbles; i++) {
     const dx = dotsStartX + i * DOT_SPACING;
     const dy = cauldronY + DOT_Y_OFFSET;
+    const color = getPotionColor(recipeId, i);
     ctx.save();
     ctx.beginPath();
     ctx.arc(dx, dy, 5, 0, Math.PI * 2);
     if (i < bubbleIndex) {
-      ctx.fillStyle = colors[i % colors.length];
+      ctx.fillStyle = color;
       ctx.globalAlpha = 0.9;
     } else if (i === bubbleIndex) {
-      ctx.fillStyle = colors[i % colors.length];
+      ctx.fillStyle = color;
       ctx.globalAlpha = 0.4;
     } else {
       ctx.fillStyle = 'rgba(200, 200, 255, 0.25)';
@@ -123,17 +171,17 @@ export function drawBrewingBubbles(
     ctx.restore();
   }
 
-  // Rising current bubble: starts small at cauldron, grows and floats upward
+  // ── Rising large interactive bubble ──────────────────────────────────
   if (bubbleIndex < totalBubbles) {
     const riseY = cauldronY - phaseProgress * MAX_RISE;
     const size = MIN_SIZE + phaseProgress * (MAX_SIZE - MIN_SIZE);
-    const color = colors[bubbleIndex % colors.length];
+    const color = getPotionColor(recipeId, bubbleIndex);
 
     ctx.save();
 
     if (bubbleActive) {
       ctx.shadowColor = color;
-      ctx.shadowBlur = 28;
+      ctx.shadowBlur = 35;
     }
 
     // Bubble body

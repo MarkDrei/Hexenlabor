@@ -73,7 +73,7 @@ function drawInventory(
       ctx.shadowColor = '#facc15';
       ctx.shadowBlur = 14;
     } else {
-      ctx.fillStyle = slot ? 'rgba(124, 58, 237, 0.4)' : 'rgba(30, 41, 59, 0.6)';
+      ctx.fillStyle = slot ? 'rgba(30, 41, 59, 0.5)' : 'rgba(30, 41, 59, 0.6)';
       ctx.strokeStyle = slot ? '#a78bfa' : '#475569';
       ctx.lineWidth = 2;
       if (slot) {
