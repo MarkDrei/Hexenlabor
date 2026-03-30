@@ -7,7 +7,7 @@ import { gameState, addToInventory, addStars, setPhase, startBrewing, updateColl
 import { updateIngredients, findNearbyIngredient, removeIngredient } from '@/game/ingredients';
 import { findMatchingRecipe, consumeRecipeIngredients, getAllRecipesForDisplay } from '@/game/recipes';
 import { updateOrders, getOrderForRequester, hasMatchingPotion } from '@/game/orders';
-import { drawIngredientPickup, drawSparkles, drawBrewingBubbles, drawCollectAnimations, drawCandle, drawFloatingSparkles, drawMoonCrescent, drawStarFlyAnimations } from '@/renderers/effects';
+import { drawIngredientPickup, drawSparkles, drawBrewingBubbles, drawCollectAnimations, drawStarFlyAnimations } from '@/renderers/effects';
 import { drawHud, drawSpeechBubble, HudLayout } from '@/renderers/hud';
 
 export default function GameCanvas() {
@@ -361,13 +361,13 @@ export default function GameCanvas() {
         const { hutX, hutW, hutH, yOffset } = hutBounds;
         const scale = ch / hutImg.naturalHeight;
 
-        // ── Static things (cauldron, books) ────────────────────────────
+        // ── Static things (cauldron) ──────────────────────────────────
         if (thingsImg.complete && thingsImg.naturalWidth > 0) {
           const w = thingsImg.width;
           const h = thingsImg.height;
 
-          // Cauldron on the bottom floor
-          const cauldronSrc = { x: w * 0.25, y: h * 0.5, w: w * 0.25, h: h * 0.5 };
+          // Cauldron on the bottom floor (clip 120px off the left, 10px off the top of the source region)
+          const cauldronSrc = { x: w * 0.25 + 120, y: h * 0.5 + 10, w: w * 0.25 - 120, h: h * 0.5 - 10 };
           const caw = cauldronSrc.w * scale * 0.8;
           const cah = cauldronSrc.h * scale * 0.8;
           const cX = hutX + hutW * 0.45 - caw / 2;
@@ -376,28 +376,7 @@ export default function GameCanvas() {
           cauldronCenterX = cX + caw / 2;
           cauldronCenterY = cY + cah / 2;
           cauldronReady = true;
-
-          // Books on the top floor
-          const booksSrc = { x: w * 0.5, y: h * 0.5, w: w * 0.25, h: h * 0.5 };
-          const bw = booksSrc.w * scale * 0.5;
-          const bh = booksSrc.h * scale * 0.5;
-          const bX = hutX + hutW * 0.55 - bw / 2;
-          const bY = ch * 0.48 - yOffset - bh;
-          ctx.drawImage(thingsImg, booksSrc.x, booksSrc.y, booksSrc.w, booksSrc.h, bX, bY, bw, bh);
         }
-
-        // ── Visual decorations ─────────────────────────────────────────
-        // Candles on each floor
-        const candleSize = Math.max(14, ch * 0.025);
-        drawCandle(ctx, hutX + hutW * 0.25, ch * 0.88 - yOffset, time, candleSize);
-        drawCandle(ctx, hutX + hutW * 0.30, ch * 0.60 - yOffset, time, candleSize);
-        drawCandle(ctx, hutX + hutW * 0.25, ch * 0.42 - yOffset, time, candleSize);
-
-        // Moon in the attic window
-        drawMoonCrescent(ctx, hutX + hutW * 0.47, ch * 0.18, Math.max(16, ch * 0.03), time);
-
-        // Sparkles around cauldron
-        drawFloatingSparkles(ctx, cauldronCenterX, cauldronCenterY - 15, time, 6, 25);
 
         // ── Ingredient pickups ─────────────────────────────────────────
         updateIngredients(hutBounds);

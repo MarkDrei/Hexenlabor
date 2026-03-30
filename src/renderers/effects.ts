@@ -223,65 +223,6 @@ export function drawCollectAnimations(
   }
 }
 
-/** Draw a floating candle with flicker */
-export function drawCandle(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  time: number,
-  size: number,
-): void {
-  const flicker = 0.7 + 0.3 * Math.sin(time * 0.15 + x);
-  ctx.save();
-
-  // Candle glow
-  ctx.shadowColor = '#f59e0b';
-  ctx.shadowBlur = size * 2 * flicker;
-  ctx.globalAlpha = 0.5 * flicker;
-  ctx.beginPath();
-  ctx.arc(x, y - size, size * 0.8, 0, Math.PI * 2);
-  ctx.fillStyle = '#fbbf24';
-  ctx.fill();
-
-  // Candle emoji
-  ctx.globalAlpha = 1;
-  ctx.shadowBlur = 0;
-  ctx.font = `${size}px serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('🕯️', x, y);
-  ctx.restore();
-}
-
-/** Draw sparkle particles floating around a point */
-export function drawFloatingSparkles(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  time: number,
-  count: number,
-  radius: number,
-): void {
-  ctx.save();
-  for (let i = 0; i < count; i++) {
-    const angle = (Math.PI * 2 * i) / count + time * 0.01;
-    const r = radius * (0.5 + 0.5 * Math.sin(time * 0.02 + i));
-    const px = x + Math.cos(angle) * r;
-    const py = y + Math.sin(angle) * r;
-    const alpha = 0.3 + 0.7 * Math.sin(time * 0.05 + i * 1.5);
-    const sz = 2 + Math.sin(time * 0.03 + i) * 1.5;
-
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = '#facc15';
-    ctx.shadowColor = '#facc15';
-    ctx.shadowBlur = 6;
-    ctx.beginPath();
-    ctx.arc(px, py, sz, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
 /** Draw flying star animations toward the star counter (top-left). */
 export function drawStarFlyAnimations(
   ctx: CanvasRenderingContext2D,
@@ -308,22 +249,3 @@ export function drawStarFlyAnimations(
   }
 }
 
-/** Draw a moon crescent in the attic window */
-export function drawMoonCrescent(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  size: number,
-  time: number,
-): void {
-  const wobble = Math.sin(time * 0.005) * 2;
-  ctx.save();
-  ctx.globalAlpha = 0.9;
-  ctx.font = `${size}px serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.shadowColor = '#a78bfa';
-  ctx.shadowBlur = size;
-  ctx.fillText('🌙', x + wobble, y);
-  ctx.restore();
-}
