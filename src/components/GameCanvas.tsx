@@ -366,8 +366,8 @@ export default function GameCanvas() {
           const w = thingsImg.width;
           const h = thingsImg.height;
 
-          // Cauldron on the bottom floor (clip ~50px off the right of the source region)
-          const cauldronSrc = { x: w * 0.25, y: h * 0.5, w: w * 0.25 - 50, h: h * 0.5 };
+          // Cauldron on the bottom floor (clip 130px of grass/wall off the left of the source region)
+          const cauldronSrc = { x: w * 0.25 + 130, y: h * 0.5, w: w * 0.25 - 130, h: h * 0.5 };
           const caw = cauldronSrc.w * scale * 0.8;
           const cah = cauldronSrc.h * scale * 0.8;
           const cX = hutX + hutW * 0.45 - caw / 2;
