@@ -220,34 +220,33 @@ export default function GameCanvas() {
       if (!hutBounds) return;
       const yOffset = hutBounds.yOffset;
 
-      // Check if long-pressing on cat (top floor)
       const catY = canvas.height * 0.48 - yOffset;
+      const monsterY = canvas.height * 0.66 - yOffset;
+
+      // Check potion delivery FIRST so it takes priority over petting
+      if (gameState.brewedPotion) {
+        if (catX > 0 && Math.hypot(pos.x - catX, pos.y - catY) < 80 && hasMatchingPotion('cat')) {
+          deliverPotion('cat');
+          return;
+        }
+        if (monsterX > 0 && Math.hypot(pos.x - monsterX, pos.y - monsterY) < 80 && hasMatchingPotion('monster')) {
+          deliverPotion('monster');
+          return;
+        }
+      }
+
+      // Check if long-pressing on cat (top floor) — pet
       if (catX > 0 && Math.hypot(pos.x - catX, pos.y - catY) < 50) {
-        // Pet the cat!
         addStars(1);
         sparkles.push({ x: catX, y: catY - 30, color: '#facc15', progress: 0 });
         return;
       }
 
-      // Check if long-pressing on monster (middle floor)
-      const monsterY = canvas.height * 0.66 - yOffset;
+      // Check if long-pressing on monster (middle floor) — pet
       if (monsterX > 0 && Math.hypot(pos.x - monsterX, pos.y - monsterY) < 50) {
-        // Pet the monster!
         addStars(1);
         sparkles.push({ x: monsterX, y: monsterY - 30, color: '#facc15', progress: 0 });
         return;
-      }
-
-      // Check if long-pressing on NPC with matching potion (delivery)
-      if (gameState.brewedPotion) {
-        if (catX > 0 && Math.hypot(pos.x - catX, pos.y - catY) < 60 && hasMatchingPotion('cat')) {
-          deliverPotion('cat');
-          return;
-        }
-        if (monsterX > 0 && Math.hypot(pos.x - monsterX, pos.y - monsterY) < 60 && hasMatchingPotion('monster')) {
-          deliverPotion('monster');
-          return;
-        }
       }
     };
 
@@ -546,36 +545,50 @@ export default function GameCanvas() {
             catX = getRandomX(0.2, 0.7);
             catTargetX = catX;
           }
-          if (catWaitFrames > 0) {
-            catWaitFrames--;
-          } else {
-            const dx = catTargetX - catX;
-            if (Math.abs(dx) <= catSpeed) {
-              catX = catTargetX;
-              catWaitFrames = 60 + Math.random() * 120;
-              catTargetX = getRandomX(0.2, 0.7);
-              catFacingRight = catTargetX > catX;
-            } else {
-              catX += Math.sign(dx) * catSpeed;
-            }
-          }
 
           // Monster (middle floor)
           if (monsterX === -1) {
             monsterX = getRandomX(0.25, 0.65);
             monsterTargetX = monsterX;
           }
-          if (monsterWaitFrames > 0) {
-            monsterWaitFrames--;
-          } else {
-            const dx = monsterTargetX - monsterX;
-            if (Math.abs(dx) <= monsterSpeed) {
-              monsterX = monsterTargetX;
-              monsterWaitFrames = 100 + Math.random() * 200;
-              monsterTargetX = getRandomX(0.25, 0.65);
-              monsterFacingRight = monsterTargetX > monsterX;
+
+          // NPC Y positions (shared by movement + draw + proximity checks)
+          const catY = ch * 0.48 - yOffset;
+          const monsterY = ch * 0.66 - yOffset;
+
+          // Freeze NPCs when witch is nearby so potion delivery is reliable
+          const witchNearCat = Math.hypot(x - catX, y - catY) < 120;
+          const witchNearMonster = Math.hypot(x - monsterX, y - monsterY) < 120;
+
+          if (!witchNearCat) {
+            if (catWaitFrames > 0) {
+              catWaitFrames--;
             } else {
-              monsterX += Math.sign(dx) * monsterSpeed;
+              const dx = catTargetX - catX;
+              if (Math.abs(dx) <= catSpeed) {
+                catX = catTargetX;
+                catWaitFrames = 60 + Math.random() * 120;
+                catTargetX = getRandomX(0.2, 0.7);
+                catFacingRight = catTargetX > catX;
+              } else {
+                catX += Math.sign(dx) * catSpeed;
+              }
+            }
+          }
+
+          if (!witchNearMonster) {
+            if (monsterWaitFrames > 0) {
+              monsterWaitFrames--;
+            } else {
+              const dx = monsterTargetX - monsterX;
+              if (Math.abs(dx) <= monsterSpeed) {
+                monsterX = monsterTargetX;
+                monsterWaitFrames = 100 + Math.random() * 200;
+                monsterTargetX = getRandomX(0.25, 0.65);
+                monsterFacingRight = monsterTargetX > monsterX;
+              } else {
+                monsterX += Math.sign(dx) * monsterSpeed;
+              }
             }
           }
 
@@ -592,8 +605,6 @@ export default function GameCanvas() {
           const monsterAnimIndex = monsterWaitFrames > 0 ? 0 : npcFrameIndex;
           const catSX = catAnimIndex * npcSpriteW;
           const monsterSX = monsterAnimIndex * npcSpriteW;
-          const catY = ch * 0.48 - yOffset;
-          const monsterY = ch * 0.66 - yOffset;
 
           // Draw Cat
           ctx.save();

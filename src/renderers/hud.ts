@@ -88,6 +88,8 @@ function drawInventory(
 
     if (slot) {
       ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
+      ctx.fillStyle = 'white';
       ctx.font = `${slotSize * 0.6}px serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -145,8 +147,10 @@ function drawBrewedPotionSlot(
   ctx.fill();
   ctx.stroke();
   ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
 
   // Potion emoji
+  ctx.fillStyle = 'white';
   ctx.font = `${slotSize * 0.6}px serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
