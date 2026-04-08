@@ -1,15 +1,25 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { NavigationMesh, createHutNavMesh } from '@/game/navigation';
-import { Position, HutBounds, INGREDIENT_EMOJI, INGREDIENT_GLOW_COLOR } from '@/shared/types';
+import { NavigationMesh, createHutNavMesh, getHutExitZone } from '@/game/navigation';
+import { Position, HutBounds, Rect, INGREDIENT_EMOJI, INGREDIENT_GLOW_COLOR } from '@/shared/types';
 import { gameState, addToInventory, addStars, setPhase, startBrewing, updateCollectAnimations, addCollectAnimation, completeOrder, getRecipeUnlocks, removeFromInventory } from '@/game/state';
 import { updateIngredients, findNearbyIngredient, removeIngredient } from '@/game/ingredients';
 import { findMatchingRecipe, consumeRecipeIngredients, getAllRecipesForDisplay } from '@/game/recipes';
 import { updateOrders, getOrderForRequester, hasMatchingPotion } from '@/game/orders';
+import { createMiniGameState, flapMiniGame, getMiniGameRewards, MiniGameState, updateMiniGame } from '@/game/minigame';
 import { drawIngredientPickup, drawSparkles, drawBrewingBubbles, drawCollectAnimations, drawStarFlyAnimations } from '@/renderers/effects';
 import { drawHud, drawSpeechBubble, HudLayout } from '@/renderers/hud';
 import { drawBackground } from '@/renderers/background';
+
+const LONG_PRESS_MS = 500;
+const WITCH_RETURN_X_RATIO = 0.24;
+const WITCH_RETURN_Y_RATIO = 0.90;
+const INGREDIENT_OVERFLOW_STAR_VALUE = 2;
+const CLOUD_TRAVEL_WIDTH = 200;
+const CLOUD_SPEED = 0.03;
+const CLOUD_WRAP_BUFFER = 260;
+const CLOUD_BASE_OFFSET = 130;
 
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -23,7 +33,11 @@ export default function GameCanvas() {
 
     let navMesh: NavigationMesh | null = null;
     let hutBounds: HutBounds | null = null;
+    let exitZone: Rect | null = null;
     let hudLayout: HudLayout | null = null;
+    let exitPromptButtons: { start: Rect; cancel: Rect } | null = null;
+    let miniGame: MiniGameState | null = null;
+    let miniGameRewardButton: Rect | null = null;
 
     const hutImg = new Image();
     hutImg.src = '/assets/hut.png';
@@ -39,6 +53,11 @@ export default function GameCanvas() {
         const yOffset = canvas.height * 0.06;
         navMesh = createHutNavMesh(drawX, 0, drawWidth, canvas.height);
         hutBounds = { hutX: drawX, hutY: 0, hutW: drawWidth, hutH: canvas.height, yOffset };
+        exitZone = getHutExitZone(drawX, 0, drawWidth, canvas.height);
+      }
+
+      if (miniGame) {
+        miniGame = createMiniGameState(canvas.width, canvas.height);
       }
     };
 
@@ -92,7 +111,6 @@ export default function GameCanvas() {
     // Long press tracking
     let pointerDownTimer: ReturnType<typeof setTimeout> | null = null;
     let pointerDownPos: Position | null = null;
-    const LONG_PRESS_MS = 500;
 
     // Brewing timer
     let brewTimer = 0;
@@ -112,9 +130,88 @@ export default function GameCanvas() {
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     };
 
+    const isInsideRect = (pos: Position, rect: Rect | null) => {
+      return !!rect && pos.x >= rect.x && pos.x <= rect.x + rect.w && pos.y >= rect.y && pos.y <= rect.y + rect.h;
+    };
+
+    const moveWitchBackInside = () => {
+      if (!hutBounds) return;
+      x = hutBounds.hutX + hutBounds.hutW * WITCH_RETURN_X_RATIO;
+      y = hutBounds.hutH * WITCH_RETURN_Y_RATIO - hutBounds.yOffset;
+      path = [];
+      pathIndex = 0;
+      pendingBrew = false;
+    };
+
+    const startMiniGame = () => {
+      miniGame = createMiniGameState(canvas.width, canvas.height);
+      gameState.showRecipeBook = false;
+      exitPromptButtons = null;
+      miniGameRewardButton = null;
+      facingRight = true;
+      setPhase('minigame');
+    };
+
+    const cancelExitPrompt = () => {
+      moveWitchBackInside();
+      exitPromptButtons = null;
+      setPhase('exploring');
+    };
+
+    const finishMiniGame = () => {
+      if (!miniGame) {
+        setPhase('exploring');
+        return;
+      }
+
+      const rewards = getMiniGameRewards(miniGame);
+      if (rewards.stars > 0) {
+        addStars(rewards.stars);
+      }
+
+      let overflowStars = 0;
+      for (const ingredient of rewards.ingredients) {
+        if (!addToInventory(ingredient)) {
+          overflowStars += INGREDIENT_OVERFLOW_STAR_VALUE;
+        }
+      }
+      if (overflowStars > 0) {
+        addStars(overflowStars);
+      }
+
+      miniGame = null;
+      miniGameRewardButton = null;
+      moveWitchBackInside();
+      setPhase('exploring');
+    };
+
     const handlePointerDown = (e: PointerEvent) => {
       const pos = getPointerPos(e);
       pointerDownPos = pos;
+
+      if (gameState.phase === 'confirmingExit') {
+        if (exitPromptButtons) {
+          if (isInsideRect(pos, exitPromptButtons.start)) {
+            startMiniGame();
+          } else if (isInsideRect(pos, exitPromptButtons.cancel)) {
+            cancelExitPrompt();
+          }
+        }
+        return;
+      }
+
+      if (gameState.phase === 'minigame') {
+        if (miniGame?.status === 'crashed') {
+          if (isInsideRect(pos, miniGameRewardButton)) {
+            finishMiniGame();
+          }
+          return;
+        }
+        if (miniGame) {
+          flapMiniGame(miniGame);
+        }
+        return;
+      }
 
       // Start long-press timer
       pointerDownTimer = setTimeout(() => {
@@ -251,6 +348,306 @@ export default function GameCanvas() {
       }
     };
 
+    const drawActionButton = (
+      label: string,
+      rect: Rect,
+      fillStyle: string,
+      strokeStyle: string,
+      fontSize: number,
+    ) => {
+      ctx.save();
+      ctx.fillStyle = fillStyle;
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = 3;
+      ctx.shadowColor = strokeStyle;
+      ctx.shadowBlur = 14;
+      ctx.beginPath();
+      ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 18);
+      ctx.fill();
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, rect.x + rect.w / 2, rect.y + rect.h / 2);
+      ctx.restore();
+    };
+
+    const drawExitPortal = (time: number) => {
+      if (!exitZone) return;
+
+      const portalX = exitZone.x + exitZone.w * 0.18;
+      const portalY = exitZone.y + exitZone.h * 0.45;
+      const radius = Math.max(18, exitZone.h * 0.55);
+      const pulse = 0.85 + Math.sin(time * 0.004) * 0.15;
+
+      ctx.save();
+      const gradient = ctx.createRadialGradient(portalX, portalY, radius * 0.2, portalX, portalY, radius * 1.4);
+      gradient.addColorStop(0, `rgba(236, 72, 153, ${0.65 * pulse})`);
+      gradient.addColorStop(0.6, `rgba(124, 58, 237, ${0.55 * pulse})`);
+      gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(portalX, portalY, radius * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#f0abfc';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(portalX, portalY, radius * pulse, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.font = `bold ${Math.max(14, radius * 0.7)}px sans-serif`;
+      ctx.fillStyle = '#fef3c7';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('✨ Raus', portalX + radius * 1.1, portalY);
+      ctx.restore();
+    };
+
+    const drawExitPrompt = (cw: number, ch: number) => {
+      const cardW = Math.min(440, cw * 0.86);
+      const cardH = Math.min(300, ch * 0.42);
+      const cardX = (cw - cardW) / 2;
+      const cardY = (ch - cardH) / 2;
+      const btnW = (cardW - 48) / 2;
+      const btnH = 58;
+      const start = { x: cardX + 18, y: cardY + cardH - btnH - 18, w: btnW, h: btnH };
+      const cancel = { x: cardX + cardW - btnW - 18, y: start.y, w: btnW, h: btnH };
+      exitPromptButtons = { start, cancel };
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.95)';
+      ctx.strokeStyle = '#a78bfa';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(cardX, cardY, cardW, cardH, 24);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#facc15';
+      ctx.font = `bold ${Math.max(24, ch * 0.035)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('🌙 Die Hütte verlassen?', cw / 2, cardY + 24);
+
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = `${Math.max(16, ch * 0.022)}px sans-serif`;
+      ctx.fillText('Draußen wartet ein flatteriges Flug-Abenteuer.', cw / 2, cardY + 84);
+      ctx.fillText('Sammle Sterne, Zutaten und magische Extras!', cw / 2, cardY + 116);
+
+      drawActionButton('🚀 Losfliegen', start, 'rgba(16, 185, 129, 0.82)', '#34d399', Math.max(18, ch * 0.024));
+      drawActionButton('🏠 Drinnen bleiben', cancel, 'rgba(71, 85, 105, 0.82)', '#94a3b8', Math.max(17, ch * 0.022));
+      ctx.restore();
+    };
+
+    const drawMiniGame = (
+      time: number,
+      cw: number,
+      ch: number,
+      displayWidth: number,
+      displayHeight: number,
+      spriteWidth: number,
+      spriteHeight: number,
+    ) => {
+      if (!miniGame) return;
+
+      miniGame.width = cw;
+      miniGame.height = ch;
+      miniGame.witchX = cw * 0.35;
+
+      const result = miniGame.status === 'running' ? updateMiniGame(miniGame) : null;
+      const sky = ctx.createLinearGradient(0, 0, 0, ch);
+      sky.addColorStop(0, '#0f172a');
+      sky.addColorStop(0.45, '#1d4ed8');
+      sky.addColorStop(1, '#7c3aed');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, cw, ch);
+
+      const moonX = cw * 0.78;
+      const moonY = ch * 0.14;
+      ctx.save();
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.95)';
+      ctx.beginPath();
+      ctx.arc(moonX, moonY, Math.max(26, cw * 0.06), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.beginPath();
+      ctx.arc(moonX + 14, moonY - 6, Math.max(18, cw * 0.045), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      for (let i = 0; i < 28; i++) {
+        const starX = (i * 97 + Math.sin(time * 0.0015 + i) * 22 + cw) % cw;
+        const starY = (i * 57 + (time * 0.02 * (1 + (i % 3) * 0.25))) % ch;
+        const size = 1.5 + (i % 3);
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.35 + ((i % 5) * 0.1)})`;
+        ctx.fillRect(starX, starY, size, size);
+      }
+
+      for (let i = 0; i < 3; i++) {
+        const cloudX = ((cw + CLOUD_TRAVEL_WIDTH) - ((time * CLOUD_SPEED * (i + 1)) % (cw + CLOUD_WRAP_BUFFER)))
+          - CLOUD_BASE_OFFSET;
+        const cloudY = ch * (0.18 + i * 0.16);
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.beginPath();
+        ctx.ellipse(cloudX, cloudY, 70, 24, 0, 0, Math.PI * 2);
+        ctx.ellipse(cloudX + 36, cloudY + 6, 52, 20, 0, 0, Math.PI * 2);
+        ctx.ellipse(cloudX - 34, cloudY + 8, 48, 18, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      for (const obstacle of miniGame.obstacles) {
+        const topHeight = obstacle.gapY;
+        const bottomY = obstacle.gapY + obstacle.gapHeight;
+        const bottomHeight = ch - bottomY;
+
+        ctx.save();
+        ctx.fillStyle = '#14532d';
+        ctx.strokeStyle = '#86efac';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(obstacle.x, 0, obstacle.width, topHeight, 20);
+        ctx.roundRect(obstacle.x, bottomY, obstacle.width, bottomHeight, 20);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(167, 243, 208, 0.45)';
+        ctx.fillRect(obstacle.x + 8, 0, 10, topHeight);
+        ctx.fillRect(obstacle.x + 8, bottomY, 10, bottomHeight);
+        ctx.restore();
+
+        const collectible = obstacle.collectible;
+        if (collectible && !collectible.collected) {
+          const cx = obstacle.x + obstacle.width / 2;
+          const bobY = collectible.y + Math.sin(time * 0.006 + obstacle.x * 0.03) * 8;
+          ctx.save();
+          ctx.font = `${Math.max(24, ch * 0.038)}px serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(
+            collectible.kind === 'star'
+              ? '⭐'
+              : collectible.kind === 'shield'
+                ? '🫧'
+                : INGREDIENT_EMOJI[collectible.ingredientType!],
+            cx,
+            bobY,
+          );
+          ctx.restore();
+        }
+      }
+
+      const witchAngle = Math.max(-0.55, Math.min(0.7, miniGame.witchVelocity * 0.08));
+      ctx.save();
+      ctx.translate(miniGame.witchX, miniGame.witchY);
+      ctx.rotate(witchAngle);
+      if (!facingRight) {
+        ctx.scale(-1, 1);
+      }
+      ctx.drawImage(
+        witchImg,
+        spriteWidth,
+        0,
+        spriteWidth,
+        spriteHeight,
+        -displayWidth / 2,
+        -displayHeight / 2,
+        displayWidth,
+        displayHeight,
+      );
+      ctx.restore();
+
+      if (result?.collectedStar) {
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.25)';
+        ctx.beginPath();
+        ctx.arc(miniGame.witchX, miniGame.witchY, 42, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.62)';
+      ctx.beginPath();
+      ctx.roundRect(16, 16, Math.min(260, cw * 0.58), 108, 18);
+      ctx.fill();
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = `bold ${Math.max(20, ch * 0.03)}px sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`🧹 Fluglauf ${miniGame.score}`, 28, 28);
+      ctx.fillText(`⭐ Bonus ${miniGame.starsCollected}`, 28, 58);
+      ctx.fillText(`🛡️ Schild ${miniGame.shieldCharges > 0 ? 'bereit' : 'leer'}`, 28, 88);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fde68a';
+      ctx.fillText(`Combo x${Math.max(1, miniGame.combo)}`, Math.min(260, cw * 0.58), 28);
+      ctx.fillStyle = '#bfdbfe';
+      ctx.fillText(`Beste Serie ${miniGame.bestCombo}`, Math.min(260, cw * 0.58), 58);
+      ctx.restore();
+
+      if (miniGame.status === 'running' && miniGame.frames < 180) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.58)';
+        ctx.beginPath();
+        ctx.roundRect(cw * 0.12, ch * 0.78, cw * 0.76, 76, 20);
+        ctx.fill();
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = `bold ${Math.max(18, ch * 0.024)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Tippe irgendwo, damit die Hexe flattert!', cw / 2, ch * 0.78 + 30);
+        ctx.font = `${Math.max(15, ch * 0.02)}px sans-serif`;
+        ctx.fillText('Sammle Sterne, Zutaten und Schildblasen zwischen den Hecken.', cw / 2, ch * 0.78 + 56);
+        ctx.restore();
+      }
+
+      if (miniGame.status === 'crashed') {
+        const rewards = getMiniGameRewards(miniGame);
+        const button = {
+          x: cw * 0.18,
+          y: ch * 0.72,
+          w: cw * 0.64,
+          h: 60,
+        };
+        miniGameRewardButton = button;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.76)';
+        ctx.fillRect(0, 0, cw, ch);
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.95)';
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(cw * 0.10, ch * 0.18, cw * 0.80, ch * 0.54, 24);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = `bold ${Math.max(28, ch * 0.04)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('💥 Landung im Gebüsch!', cw / 2, ch * 0.22);
+        ctx.font = `${Math.max(18, ch * 0.024)}px sans-serif`;
+        ctx.fillText(`⭐ ${rewards.stars} Sterne`, cw / 2, ch * 0.31);
+        ctx.fillText(`🧺 ${rewards.ingredients.length} Zutaten`, cw / 2, ch * 0.36);
+
+        const ingredientLine = rewards.ingredients.length > 0
+          ? rewards.ingredients.map(type => INGREDIENT_EMOJI[type]).join(' ')
+          : 'Noch keine Zutaten diesmal';
+        ctx.font = `${Math.max(24, ch * 0.03)}px serif`;
+        ctx.fillText(ingredientLine, cw / 2, ch * 0.46);
+        ctx.font = `${Math.max(16, ch * 0.021)}px sans-serif`;
+        ctx.fillText('Die Belohnung kommt mit zurück in die Hütte.', cw / 2, ch * 0.54);
+
+        drawActionButton('🎁 Einsammeln & zurück', button, 'rgba(250, 204, 21, 0.85)', '#fde68a', Math.max(18, ch * 0.023));
+        ctx.restore();
+      } else {
+        miniGameRewardButton = null;
+      }
+    };
+
     const deliverPotion = (requester: 'cat' | 'monster' | 'visitor') => {
       const order = getOrderForRequester(requester);
       if (!order || !gameState.brewedPotion) return;
@@ -361,6 +758,12 @@ export default function GameCanvas() {
         const { hutX, hutW, hutH, yOffset } = hutBounds;
         const scale = ch / hutImg.naturalHeight;
 
+        if (gameState.phase === 'minigame') {
+          drawMiniGame(time, cw, ch, displayWidth, displayHeight, spriteWidth, spriteHeight);
+          animationFrameId = requestAnimationFrame(render);
+          return;
+        }
+
         // ── Static things (cauldron) ──────────────────────────────────
         if (thingsImg.complete && thingsImg.naturalWidth > 0) {
           const w = thingsImg.width;
@@ -378,8 +781,12 @@ export default function GameCanvas() {
           cauldronReady = true;
         }
 
+        drawExitPortal(time);
+
         // ── Ingredient pickups ─────────────────────────────────────────
-        updateIngredients(hutBounds);
+        if (gameState.phase !== 'confirmingExit') {
+          updateIngredients(hutBounds);
+        }
         const ingredientFontSize = Math.max(18, ch * 0.03);
         for (const ing of gameState.ingredients) {
           drawIngredientPickup(ctx, ing, ingredientFontSize);
@@ -389,7 +796,9 @@ export default function GameCanvas() {
         // if (navMesh) navMesh.debugDraw(ctx);
 
         // ── Update orders ─────────────────────────────────────────────
-        updateOrders();
+        if (gameState.phase !== 'confirmingExit') {
+          updateOrders();
+        }
 
         // ── Celebrating phase ─────────────────────────────────────────
         if (gameState.phase === 'celebrating') {
@@ -469,6 +878,10 @@ export default function GameCanvas() {
               }
             }
             pendingBrew = false;
+          }
+
+          if (gameState.phase === 'exploring' && exitZone && isInsideRect({ x, y }, exitZone)) {
+            setPhase('confirmingExit');
           }
         }
 
@@ -651,6 +1064,12 @@ export default function GameCanvas() {
 
         // ── HUD ───────────────────────────────────────────────────────
         hudLayout = drawHud(ctx, gameState, cw, ch);
+
+        if (gameState.phase === 'confirmingExit') {
+          drawExitPrompt(cw, ch);
+        } else {
+          exitPromptButtons = null;
+        }
 
         animationFrameId = requestAnimationFrame(render);
       };
