@@ -11,6 +11,15 @@ import { createMiniGameState, flapMiniGame, getMiniGameRewards, MiniGameState, u
 import { drawIngredientPickup, drawSparkles, drawBrewingBubbles, drawCollectAnimations, drawStarFlyAnimations } from '@/renderers/effects';
 import { drawHud, drawSpeechBubble, HudLayout } from '@/renderers/hud';
 
+const LONG_PRESS_MS = 500;
+const WITCH_RETURN_X_RATIO = 0.24;
+const WITCH_RETURN_Y_RATIO = 0.90;
+const INGREDIENT_OVERFLOW_STAR_VALUE = 2;
+const CLOUD_TRAVEL_WIDTH = 200;
+const CLOUD_SPEED = 0.03;
+const CLOUD_WRAP_BUFFER = 260;
+const CLOUD_BASE_OFFSET = 130;
+
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -101,10 +110,6 @@ export default function GameCanvas() {
     // Long press tracking
     let pointerDownTimer: ReturnType<typeof setTimeout> | null = null;
     let pointerDownPos: Position | null = null;
-    const LONG_PRESS_MS = 500;
-    const WITCH_RETURN_X_RATIO = 0.24;
-    const WITCH_RETURN_Y_RATIO = 0.90;
-    const INGREDIENT_OVERFLOW_STAR_VALUE = 2;
 
     // Brewing timer
     let brewTimer = 0;
@@ -460,11 +465,6 @@ export default function GameCanvas() {
       sky.addColorStop(1, '#7c3aed');
       ctx.fillStyle = sky;
       ctx.fillRect(0, 0, cw, ch);
-
-      const CLOUD_TRAVEL_WIDTH = 200;
-      const CLOUD_SPEED = 0.03;
-      const CLOUD_WRAP_BUFFER = 260;
-      const CLOUD_BASE_OFFSET = 130;
 
       const moonX = cw * 0.78;
       const moonY = ch * 0.14;
