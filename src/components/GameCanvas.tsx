@@ -9,6 +9,7 @@ import { findMatchingRecipe, consumeRecipeIngredients, getAllRecipesForDisplay }
 import { updateOrders, getOrderForRequester, hasMatchingPotion } from '@/game/orders';
 import { drawIngredientPickup, drawSparkles, drawBrewingBubbles, drawCollectAnimations, drawStarFlyAnimations } from '@/renderers/effects';
 import { drawHud, drawSpeechBubble, HudLayout } from '@/renderers/hud';
+import { drawBackground } from '@/renderers/background';
 
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -343,8 +344,7 @@ export default function GameCanvas() {
         const displayWidth = displayHeight * spriteAspect;
 
         // ── Clear + background ──────────────────────────────────────────
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(0, 0, cw, ch);
+        drawBackground(ctx, cw, ch, time);
 
         if (hutImg.complete && hutImg.naturalWidth > 0) {
           const scale = ch / hutImg.naturalHeight;
