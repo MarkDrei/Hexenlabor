@@ -153,7 +153,14 @@ export function getRecipeUnlocks(): string[] {
   return all;
 }
 
-const POTION_EFFECT_DURATION = 240; // ~4 seconds at 60 fps
+const POTION_EFFECT_DURATION = 1200; // ~20 seconds at 60 fps
+
+/** Speed multipliers applied to movement by certain potion effects (< 1 = slower, > 1 = faster). */
+const POTION_SPEED_MODIFIERS: Partial<Record<string, number>> = {
+  schlaftrank:     0.2,  // very slow
+  sternenstaub:    1.6,  // stardust energises
+  regenbogentrank: 2.2,  // rainbow turbo
+};
 
 /** Spawn a new potion effect on a target character. */
 export function addPotionEffect(recipeId: string, target: PotionEffect['target']): void {
@@ -173,4 +180,18 @@ export function updatePotionEffects(): void {
     e.timer--;
   }
   gameState.activeEffects = gameState.activeEffects.filter(e => e.timer > 0);
+}
+
+/**
+ * Returns the speed multiplier for a character based on any active potion effect.
+ * 1.0 = normal, < 1.0 = slowed, > 1.0 = boosted.
+ */
+export function getEffectSpeedMultiplier(target: PotionEffect['target']): number {
+  for (const ef of gameState.activeEffects) {
+    if (ef.target === target) {
+      const mod = POTION_SPEED_MODIFIERS[ef.recipeId];
+      if (mod !== undefined) return mod;
+    }
+  }
+  return 1;
 }

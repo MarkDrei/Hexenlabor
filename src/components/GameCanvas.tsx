@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { NavigationMesh, createHutNavMesh } from '@/game/navigation';
 import { Position, HutBounds, INGREDIENT_EMOJI, INGREDIENT_GLOW_COLOR } from '@/shared/types';
-import { gameState, addToInventory, addStars, setPhase, startBrewing, updateCollectAnimations, addCollectAnimation, completeOrder, getRecipeUnlocks, removeFromInventory, addPotionEffect, updatePotionEffects } from '@/game/state';
+import { gameState, addToInventory, addStars, setPhase, startBrewing, updateCollectAnimations, addCollectAnimation, completeOrder, getRecipeUnlocks, removeFromInventory, addPotionEffect, updatePotionEffects, getEffectSpeedMultiplier } from '@/game/state';
 import { updateIngredients, findNearbyIngredient, removeIngredient } from '@/game/ingredients';
 import { findMatchingRecipe, consumeRecipeIngredients, getAllRecipesForDisplay } from '@/game/recipes';
 import { updateOrders, getOrderForRequester, hasMatchingPotion } from '@/game/orders';
@@ -443,15 +443,16 @@ export default function GameCanvas() {
           const dx = wp.x - x;
           const dy = wp.y - y;
           const dist = Math.hypot(dx, dy);
+          const effectiveSpeed = speed * getEffectSpeedMultiplier('witch');
 
-          if (dist <= speed) {
+          if (dist <= effectiveSpeed) {
             x = wp.x;
             y = wp.y;
             pathIndex++;
             isMoving = pathIndex < path.length;
           } else {
-            x += (dx / dist) * speed;
-            y += (dy / dist) * speed;
+            x += (dx / dist) * effectiveSpeed;
+            y += (dy / dist) * effectiveSpeed;
             if (dx > 0) facingRight = true;
             else if (dx < 0) facingRight = false;
             isMoving = true;
@@ -553,14 +554,15 @@ export default function GameCanvas() {
             if (catWaitFrames > 0) {
               catWaitFrames--;
             } else {
+              const effectiveCatSpeed = catSpeed * getEffectSpeedMultiplier('cat');
               const dx = catTargetX - catX;
-              if (Math.abs(dx) <= catSpeed) {
+              if (Math.abs(dx) <= effectiveCatSpeed) {
                 catX = catTargetX;
                 catWaitFrames = 60 + Math.random() * 120;
                 catTargetX = getRandomX(0.2, 0.7);
                 catFacingRight = catTargetX > catX;
               } else {
-                catX += Math.sign(dx) * catSpeed;
+                catX += Math.sign(dx) * effectiveCatSpeed;
               }
             }
           }
@@ -569,14 +571,15 @@ export default function GameCanvas() {
             if (monsterWaitFrames > 0) {
               monsterWaitFrames--;
             } else {
+              const effectiveMonsterSpeed = monsterSpeed * getEffectSpeedMultiplier('monster');
               const dx = monsterTargetX - monsterX;
-              if (Math.abs(dx) <= monsterSpeed) {
+              if (Math.abs(dx) <= effectiveMonsterSpeed) {
                 monsterX = monsterTargetX;
                 monsterWaitFrames = 100 + Math.random() * 200;
                 monsterTargetX = getRandomX(0.25, 0.65);
                 monsterFacingRight = monsterTargetX > monsterX;
               } else {
-                monsterX += Math.sign(dx) * monsterSpeed;
+                monsterX += Math.sign(dx) * effectiveMonsterSpeed;
               }
             }
           }
