@@ -56,6 +56,6 @@ describe('mini game rewards', () => {
 
     expect(rewards.stars).toBe(15);
     expect(rewards.ingredients).toContain(IngredientType.Stern);
-    expect(rewards.ingredients.length).toBeGreaterThanOrEqual(2);
+    expect(rewards.ingredients).toHaveLength(2);
   });
 });

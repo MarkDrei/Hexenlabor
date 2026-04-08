@@ -113,7 +113,7 @@ export function spawnMiniGameObstacle(
       y: gapY + gapHeight * 0.5,
       collected: false,
       ingredientType: MINI_GAME_INGREDIENT_POOL[
-        Math.floor(random() * MINI_GAME_INGREDIENT_POOL.length) % MINI_GAME_INGREDIENT_POOL.length
+        Math.floor(random() * MINI_GAME_INGREDIENT_POOL.length)
       ],
     };
   } else {
