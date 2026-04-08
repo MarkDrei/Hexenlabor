@@ -10,6 +10,13 @@ export interface Size {
   height: number;
 }
 
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 // ─── Game Types ──────────────────────────────────────────────────────────────
 
 export type Floor = 'ground' | 'middle' | 'top';
@@ -83,7 +90,12 @@ export interface Order {
   spawnedAt: number;
 }
 
-export type GamePhase = 'exploring' | 'brewing' | 'celebrating';
+export type GamePhase =
+  | 'exploring'
+  | 'brewing'
+  | 'celebrating'
+  | 'confirmingExit'
+  | 'minigame';
 
 export interface BrewingState {
   bubbleIndex: number;

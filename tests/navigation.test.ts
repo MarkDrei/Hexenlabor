@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { NavigationMesh, NavPolygon, createWitchNavMesh } from '@/game/navigation';
+import { NavigationMesh, NavPolygon, createHutNavMesh, createWitchNavMesh, getHutExitZone } from '@/game/navigation';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -164,5 +164,35 @@ describe('createWitchNavMesh', () => {
     expect(mesh.isWalkable(snapped)).toBe(true);
     // Distance from snapped point to requested point should be less than width of canvas
     expect(Math.hypot(snapped.x - offMesh.x, snapped.y - offMesh.y)).toBeLessThan(CANVAS_W);
+  });
+});
+
+describe('createHutNavMesh', () => {
+  const HUT_X = 100;
+  const HUT_Y = 0;
+  const HUT_W = 420;
+  const HUT_H = 700;
+
+  it('creates a walkable exit zone beyond the lower-left side of the hut', () => {
+    const mesh = createHutNavMesh(HUT_X, HUT_Y, HUT_W, HUT_H);
+    const exitZone = getHutExitZone(HUT_X, HUT_Y, HUT_W, HUT_H);
+
+    expect(mesh.isWalkable({
+      x: exitZone.x + exitZone.w * 0.25,
+      y: exitZone.y + exitZone.h * 0.5,
+    })).toBe(true);
+  });
+
+  it('finds a path from the ground floor to the outside exit zone', () => {
+    const mesh = createHutNavMesh(HUT_X, HUT_Y, HUT_W, HUT_H);
+    const exitZone = getHutExitZone(HUT_X, HUT_Y, HUT_W, HUT_H);
+    const from = { x: HUT_X + HUT_W * 0.45, y: HUT_H * 0.90 - HUT_H * 0.09 };
+    const to = { x: exitZone.x + exitZone.w * 0.15, y: exitZone.y + exitZone.h * 0.5 };
+    const path = mesh.findPath(from, to);
+    const last = path[path.length - 1];
+
+    expect(path.length).toBeGreaterThan(0);
+    expect(last.x).toBeLessThan(HUT_X + HUT_W * 0.18);
+    expect(mesh.isWalkable(last)).toBe(true);
   });
 });

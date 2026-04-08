@@ -1,7 +1,7 @@
 // Navigation mesh with polygon-based walkable zones and A* pathfinding.
 // Re-usable infrastructure for any character movement restrictions.
 
-import { Position } from '@/shared/types';
+import { Position, Rect } from '@/shared/types';
 
 /** A (convex or concave) polygon that defines a walkable area */
 export interface NavPolygon {
@@ -409,6 +409,8 @@ export function createHutNavMesh(
   // Offset to move the whole path up to align with the drawing
   const yOffset = hutH * 0.09;
 
+  const exitZone = getHutExitZone(hutX, hutY, hutW, hutH);
+
   // Ground Floor
   const groundFloor = makeRect(
     hutX + hutW * 0.15,
@@ -448,10 +450,26 @@ export function createHutNavMesh(
   );
 
   return new NavigationMesh([
+    makeRect(exitZone.x, exitZone.y, exitZone.w, exitZone.h),
     groundFloor,
     middleFloor,
     topFloor,
     stairs1,
     stairs2
   ]);
+}
+
+export function getHutExitZone(
+  hutX: number,
+  hutY: number,
+  hutW: number,
+  hutH: number,
+): Rect {
+  const yOffset = hutH * 0.09;
+  return {
+    x: hutX - hutW * 0.10,
+    y: (hutY + hutH * 0.87) - yOffset,
+    w: hutW * 0.28,
+    h: hutH * 0.08,
+  };
 }
