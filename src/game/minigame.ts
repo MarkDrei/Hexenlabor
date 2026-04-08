@@ -61,6 +61,7 @@ const MINI_GAME_INGREDIENT_POOL: IngredientType[] = [
   IngredientType.Mondkristall,
 ];
 
+// Tuned in pixels / frames for a portrait-friendly run that stays easier than Flappy Bird.
 const GRAVITY = 0.38;
 const FLAP_STRENGTH = -6.5;
 const BASE_SPEED = 2.8;

@@ -102,6 +102,9 @@ export default function GameCanvas() {
     let pointerDownTimer: ReturnType<typeof setTimeout> | null = null;
     let pointerDownPos: Position | null = null;
     const LONG_PRESS_MS = 500;
+    const WITCH_RETURN_X_RATIO = 0.24;
+    const WITCH_RETURN_Y_RATIO = 0.90;
+    const INGREDIENT_OVERFLOW_STAR_VALUE = 2;
 
     // Brewing timer
     let brewTimer = 0;
@@ -127,8 +130,8 @@ export default function GameCanvas() {
 
     const moveWitchBackInside = () => {
       if (!hutBounds) return;
-      x = hutBounds.hutX + hutBounds.hutW * 0.24;
-      y = hutBounds.hutH * 0.90 - hutBounds.yOffset;
+      x = hutBounds.hutX + hutBounds.hutW * WITCH_RETURN_X_RATIO;
+      y = hutBounds.hutH * WITCH_RETURN_Y_RATIO - hutBounds.yOffset;
       path = [];
       pathIndex = 0;
       pendingBrew = false;
@@ -163,7 +166,7 @@ export default function GameCanvas() {
       let overflowStars = 0;
       for (const ingredient of rewards.ingredients) {
         if (!addToInventory(ingredient)) {
-          overflowStars += 2;
+          overflowStars += INGREDIENT_OVERFLOW_STAR_VALUE;
         }
       }
       if (overflowStars > 0) {
@@ -538,7 +541,17 @@ export default function GameCanvas() {
       if (!facingRight) {
         ctx.scale(-1, 1);
       }
-      ctx.drawImage(witchImg, spriteWidth, 0, spriteWidth, spriteHeight, -displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
+      ctx.drawImage(
+        witchImg,
+        spriteWidth,
+        0,
+        spriteWidth,
+        spriteHeight,
+        -displayWidth / 2,
+        -displayHeight / 2,
+        displayWidth,
+        displayHeight,
+      );
       ctx.restore();
 
       if (result?.collectedStar) {

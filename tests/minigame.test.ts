@@ -58,4 +58,30 @@ describe('mini game rewards', () => {
     expect(rewards.ingredients).toContain(IngredientType.Stern);
     expect(rewards.ingredients).toHaveLength(2);
   });
+
+  it('awards nothing for a run with zero progress', () => {
+    const rewards = getMiniGameRewards(createMiniGameState(420, 900));
+
+    expect(rewards.stars).toBe(0);
+    expect(rewards.ingredients).toEqual([]);
+  });
+
+  it('caps ingredient rewards at six items', () => {
+    const state = createMiniGameState(420, 900);
+    state.score = 12;
+    state.starsCollected = 4;
+    state.bestCombo = 6;
+    state.collectedIngredients = [
+      IngredientType.Zauberbeerle,
+      IngredientType.Hexenkraut,
+      IngredientType.Kerze,
+      IngredientType.Fliegenpilz,
+      IngredientType.Stern,
+      IngredientType.Mondkristall,
+    ];
+
+    const rewards = getMiniGameRewards(state);
+
+    expect(rewards.ingredients).toHaveLength(6);
+  });
 });
