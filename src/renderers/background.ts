@@ -1,3 +1,5 @@
+import type { HutBounds } from '@/shared/types';
+
 type RGB = [number, number, number];
 
 /** Duration of one full day/night cycle in milliseconds (4 minutes = 24 hours in-game). */
@@ -361,5 +363,71 @@ export function drawBackground(
   drawCloud(ctx, (width * 0.2 + cloudOffset) % (width + 200) - 100, height * 0.2);
   drawCloud(ctx, (width * 0.6 + cloudOffset * 1.5) % (width + 200) - 100, height * 0.3, 0.8);
   drawCloud(ctx, (width * 0.8 + cloudOffset * 0.8) % (width + 200) - 100, height * 0.15, 1.2);
+  ctx.restore();
+}
+
+export function drawHutGroundPatch(
+  ctx: CanvasRenderingContext2D,
+  hutBounds: HutBounds,
+  time: number,
+): void {
+  const phase = getDayPhase(time);
+  const { hutX, hutW, hutH } = hutBounds;
+  const centerX = hutX + hutW / 2;
+  const centerY = hutH * 0.955;
+  const radiusX = hutW * 0.34;
+  const radiusY = hutH * 0.055;
+
+  ctx.save();
+
+  const dirtGrad = ctx.createRadialGradient(
+    centerX,
+    centerY - radiusY * 0.2,
+    radiusX * 0.15,
+    centerX,
+    centerY,
+    radiusX,
+  );
+  const topMix = sampleKeyframes(GROUND_TOP_COLOR, phase);
+  dirtGrad.addColorStop(0, `rgba(${Math.round(topMix[0] * 0.45)}, ${Math.round(topMix[1] * 0.32)}, ${Math.round(topMix[2] * 0.22)}, 0.92)`);
+  dirtGrad.addColorStop(0.55, 'rgba(56, 44, 33, 0.9)');
+  dirtGrad.addColorStop(1, 'rgba(18, 16, 15, 0)');
+
+  ctx.beginPath();
+  ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2);
+  ctx.fillStyle = dirtGrad;
+  ctx.fill();
+
+  const shadowGrad = ctx.createRadialGradient(centerX, centerY, radiusX * 0.25, centerX, centerY, radiusX * 1.05);
+  shadowGrad.addColorStop(0, 'rgba(20, 16, 12, 0.45)');
+  shadowGrad.addColorStop(1, 'rgba(20, 16, 12, 0)');
+  ctx.beginPath();
+  ctx.ellipse(centerX, centerY + radiusY * 0.1, radiusX * 1.02, radiusY * 0.82, 0, 0, Math.PI * 2);
+  ctx.fillStyle = shadowGrad;
+  ctx.fill();
+
+  ctx.globalAlpha = 0.42;
+  for (let i = 0; i < 22; i++) {
+    const angle = i * 1.947;
+    const pebbleX = centerX + Math.sin(angle) * radiusX * (0.12 + (i % 7) / 8);
+    const pebbleY = centerY + Math.cos(angle * 1.31) * radiusY * (0.2 + (i % 5) / 6);
+    const pebbleW = hutW * (0.008 + (i % 3) * 0.0025);
+    const pebbleH = hutH * (0.004 + (i % 4) * 0.0015);
+
+    ctx.beginPath();
+    ctx.ellipse(pebbleX, pebbleY, pebbleW, pebbleH, angle, 0, Math.PI * 2);
+    ctx.fillStyle = i % 2 === 0 ? 'rgba(115, 108, 98, 0.8)' : 'rgba(76, 68, 60, 0.75)';
+    ctx.fill();
+  }
+
+  ctx.globalAlpha = 0.18;
+  for (let i = 0; i < 8; i++) {
+    const tuftX = centerX - radiusX * 0.8 + (radiusX * 1.6 * i) / 7;
+    ctx.beginPath();
+    ctx.ellipse(tuftX, centerY - radiusY * 0.55, hutW * 0.012, hutH * 0.008, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(26, 44, 22, 0.9)';
+    ctx.fill();
+  }
+
   ctx.restore();
 }
