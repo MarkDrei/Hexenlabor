@@ -506,20 +506,6 @@ export default function GameCanvas() {
           }
         }
 
-        // ── Draw witch ─────────────────────────────────────────────────
-        const sx = frameIndex * spriteWidth;
-        const sy = 0;
-
-        ctx.save();
-        if (!facingRight) {
-          ctx.translate(x, y);
-          ctx.scale(-1, 1);
-          ctx.drawImage(witchImg, sx, sy, spriteWidth, spriteHeight, -displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
-        } else {
-          ctx.drawImage(witchImg, sx, sy, spriteWidth, spriteHeight, x - displayWidth / 2, y - displayHeight / 2, displayWidth, displayHeight);
-        }
-        ctx.restore();
-
         // ── Draw NPCs ──────────────────────────────────────────────────
         if (catFluffyImg.complete && catFluffyImg.naturalWidth > 0) {
           const npcSpriteW = catFluffyImg.width / 5;
@@ -641,6 +627,20 @@ export default function GameCanvas() {
             drawSpeechBubble(ctx, monsterX, monsterY - displayH - 10, monsterOrder.recipe.emoji, bubbleSize);
           }
         }
+
+        // ── Draw witch in foreground ──────────────────────────────────
+        const sx = frameIndex * spriteWidth;
+        const sy = 0;
+
+        ctx.save();
+        if (!facingRight) {
+          ctx.translate(x, y);
+          ctx.scale(-1, 1);
+          ctx.drawImage(witchImg, sx, sy, spriteWidth, spriteHeight, -displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
+        } else {
+          ctx.drawImage(witchImg, sx, sy, spriteWidth, spriteHeight, x - displayWidth / 2, y - displayHeight / 2, displayWidth, displayHeight);
+        }
+        ctx.restore();
 
         // ── Sparkle effects ──────────────────────────────────────────
         for (const sp of sparkles) {

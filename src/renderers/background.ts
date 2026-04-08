@@ -375,7 +375,7 @@ export function drawHutGroundPatch(
   const { hutX, hutW, hutH } = hutBounds;
   const centerX = hutX + hutW / 2;
   const centerY = hutH * 0.955;
-  const radiusX = hutW * 0.34;
+  const radiusX = hutW * 0.8;
   const radiusY = hutH * 0.055;
 
   ctx.save();
