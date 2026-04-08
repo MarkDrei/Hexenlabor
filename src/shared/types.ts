@@ -103,6 +103,16 @@ export interface CollectAnimation {
   progress: number;
 }
 
+export type EffectTarget = 'cat' | 'monster' | 'witch';
+
+/** A potion effect that plays on a character after delivery or self-consumption. */
+export interface PotionEffect {
+  recipeId: string;
+  target: EffectTarget;
+  timer: number;     // frames remaining (counts down to 0)
+  maxTimer: number;  // total duration in frames
+}
+
 export interface GameState {
   score: number;
   stars: number;
@@ -118,6 +128,7 @@ export interface GameState {
   collectAnimations: CollectAnimation[];
   showRecipeBook: boolean;
   celebrateTimer: number;
+  activeEffects: PotionEffect[];
 }
 
 export interface HutBounds {

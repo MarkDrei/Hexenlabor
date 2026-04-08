@@ -6,6 +6,7 @@ import {
   Recipe,
   BrewingState,
   CollectAnimation,
+  PotionEffect,
 } from '@/shared/types';
 
 const LEVEL_THRESHOLDS = [0, 50, 150, 350, 700, 1500];
@@ -26,6 +27,7 @@ function createInitialState(): GameState {
     collectAnimations: [],
     showRecipeBook: false,
     celebrateTimer: 0,
+    activeEffects: [],
   };
 }
 
@@ -149,4 +151,26 @@ export function getRecipeUnlocks(): string[] {
   }
   gameState.unlockedRecipes = all;
   return all;
+}
+
+const POTION_EFFECT_DURATION = 240; // ~4 seconds at 60 fps
+
+/** Spawn a new potion effect on a target character. */
+export function addPotionEffect(recipeId: string, target: PotionEffect['target']): void {
+  // Remove any existing effect on the same target so they don't stack awkwardly
+  gameState.activeEffects = gameState.activeEffects.filter(e => e.target !== target);
+  gameState.activeEffects.push({
+    recipeId,
+    target,
+    timer: POTION_EFFECT_DURATION,
+    maxTimer: POTION_EFFECT_DURATION,
+  });
+}
+
+/** Tick down effect timers and remove expired effects. */
+export function updatePotionEffects(): void {
+  for (const e of gameState.activeEffects) {
+    e.timer--;
+  }
+  gameState.activeEffects = gameState.activeEffects.filter(e => e.timer > 0);
 }
