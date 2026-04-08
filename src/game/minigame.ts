@@ -66,6 +66,8 @@ const GRAVITY = 0.38;
 const FLAP_STRENGTH = -6.5;
 const BASE_SPEED = 2.8;
 const BASE_SPAWN_INTERVAL = 92;
+const BONUS_INGREDIENT_SCORE_DIVISOR = 4;
+const MAX_INGREDIENT_REWARDS = 6;
 
 export function createMiniGameState(width: number, height: number): MiniGameState {
   return {
@@ -243,7 +245,9 @@ export function updateMiniGame(
 }
 
 export function getMiniGameRewards(state: MiniGameState): MiniGameRewards {
-  const bonusCount = state.score > 0 ? Math.max(1, Math.floor(state.score / 4)) : 0;
+  const bonusCount = state.score > 0
+    ? Math.max(1, Math.floor(state.score / BONUS_INGREDIENT_SCORE_DIVISOR))
+    : 0;
   const bonusIngredients: IngredientType[] = [];
   for (let i = 0; i < bonusCount; i++) {
     bonusIngredients.push(
@@ -253,6 +257,6 @@ export function getMiniGameRewards(state: MiniGameState): MiniGameRewards {
 
   return {
     stars: state.score * 3 + state.starsCollected * 2 + state.bestCombo,
-    ingredients: [...state.collectedIngredients, ...bonusIngredients].slice(0, 6),
+    ingredients: [...state.collectedIngredients, ...bonusIngredients].slice(0, MAX_INGREDIENT_REWARDS),
   };
 }

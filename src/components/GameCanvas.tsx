@@ -461,6 +461,11 @@ export default function GameCanvas() {
       ctx.fillStyle = sky;
       ctx.fillRect(0, 0, cw, ch);
 
+      const CLOUD_TRAVEL_WIDTH = 200;
+      const CLOUD_SPEED = 0.03;
+      const CLOUD_WRAP_BUFFER = 260;
+      const CLOUD_BASE_OFFSET = 130;
+
       const moonX = cw * 0.78;
       const moonY = ch * 0.14;
       ctx.save();
@@ -483,7 +488,8 @@ export default function GameCanvas() {
       }
 
       for (let i = 0; i < 3; i++) {
-        const cloudX = ((cw + 200) - ((time * 0.03 * (i + 1)) % (cw + 260))) - 130;
+        const cloudX = ((cw + CLOUD_TRAVEL_WIDTH) - ((time * CLOUD_SPEED * (i + 1)) % (cw + CLOUD_WRAP_BUFFER)))
+          - CLOUD_BASE_OFFSET;
         const cloudY = ch * (0.18 + i * 0.16);
         ctx.fillStyle = 'rgba(255,255,255,0.12)';
         ctx.beginPath();
