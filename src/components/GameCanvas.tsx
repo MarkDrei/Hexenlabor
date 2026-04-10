@@ -9,7 +9,17 @@ import { findMatchingRecipe, consumeRecipeIngredients, getAllRecipesForDisplay }
 import { updateOrders, getOrderForRequester, hasMatchingPotion } from '@/game/orders';
 import { drawIngredientPickup, drawSparkles, drawBrewingBubbles, drawCollectAnimations, drawStarFlyAnimations } from '@/renderers/effects';
 import { drawHud, drawSpeechBubble, HudLayout } from '@/renderers/hud';
-import { drawBackground } from '@/renderers/background';
+import { drawBackground, drawHutGroundPatch } from '@/renderers/background';
+
+const CAT_FLOOR_DROP_PX = 10;
+const MONSTER_FLOOR_DROP_PX = 25;
+
+function getNpcYPositions(canvasHeight: number, yOffset: number) {
+  return {
+    catY: canvasHeight * 0.48 - yOffset + CAT_FLOOR_DROP_PX,
+    monsterY: canvasHeight * 0.66 - yOffset + MONSTER_FLOOR_DROP_PX,
+  };
+}
 
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -219,10 +229,7 @@ export default function GameCanvas() {
 
     const handleLongPress = (pos: Position) => {
       if (!hutBounds) return;
-      const yOffset = hutBounds.yOffset;
-
-      const catY = canvas.height * 0.48 - yOffset;
-      const monsterY = canvas.height * 0.66 - yOffset;
+      const { catY, monsterY } = getNpcYPositions(canvas.height, hutBounds.yOffset);
 
       // Check potion delivery FIRST so it takes priority over petting
       if (gameState.brewedPotion) {
@@ -259,9 +266,10 @@ export default function GameCanvas() {
         const stars = completed.recipe.rewardStars;
         addStars(stars);
         gameState.brewedPotion = null;
+        const { catY, monsterY } = getNpcYPositions(canvas.height, hutBounds?.yOffset || 0);
         const npcPos = requester === 'cat'
-          ? { x: catX, y: canvas.height * 0.48 - (hutBounds?.yOffset || 0) }
-          : { x: monsterX, y: canvas.height * 0.66 - (hutBounds?.yOffset || 0) };
+          ? { x: catX, y: catY }
+          : { x: monsterX, y: monsterY };
         // Trigger NPC backflip
         if (requester === 'cat') catFlipTimer = FLIP_DURATION;
         else monsterFlipTimer = FLIP_DURATION;
@@ -345,6 +353,10 @@ export default function GameCanvas() {
 
         // ── Clear + background ──────────────────────────────────────────
         drawBackground(ctx, cw, ch, time);
+
+        if (hutBounds) {
+          drawHutGroundPatch(ctx, hutBounds, time);
+        }
 
         if (hutImg.complete && hutImg.naturalWidth > 0) {
           const scale = ch / hutImg.naturalHeight;
@@ -494,20 +506,6 @@ export default function GameCanvas() {
           }
         }
 
-        // ── Draw witch ─────────────────────────────────────────────────
-        const sx = frameIndex * spriteWidth;
-        const sy = 0;
-
-        ctx.save();
-        if (!facingRight) {
-          ctx.translate(x, y);
-          ctx.scale(-1, 1);
-          ctx.drawImage(witchImg, sx, sy, spriteWidth, spriteHeight, -displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
-        } else {
-          ctx.drawImage(witchImg, sx, sy, spriteWidth, spriteHeight, x - displayWidth / 2, y - displayHeight / 2, displayWidth, displayHeight);
-        }
-        ctx.restore();
-
         // ── Draw NPCs ──────────────────────────────────────────────────
         if (catFluffyImg.complete && catFluffyImg.naturalWidth > 0) {
           const npcSpriteW = catFluffyImg.width / 5;
@@ -532,8 +530,7 @@ export default function GameCanvas() {
           }
 
           // NPC Y positions (shared by movement + draw + proximity checks)
-          const catY = ch * 0.48 - yOffset;
-          const monsterY = ch * 0.66 - yOffset;
+          const { catY, monsterY } = getNpcYPositions(ch, yOffset);
 
           // Freeze NPCs when witch is nearby so potion delivery is reliable
           const witchNearCat = Math.hypot(x - catX, y - catY) < 120;
@@ -630,6 +627,20 @@ export default function GameCanvas() {
             drawSpeechBubble(ctx, monsterX, monsterY - displayH - 10, monsterOrder.recipe.emoji, bubbleSize);
           }
         }
+
+        // ── Draw witch in foreground ──────────────────────────────────
+        const sx = frameIndex * spriteWidth;
+        const sy = 0;
+
+        ctx.save();
+        if (!facingRight) {
+          ctx.translate(x, y);
+          ctx.scale(-1, 1);
+          ctx.drawImage(witchImg, sx, sy, spriteWidth, spriteHeight, -displayWidth / 2, -displayHeight / 2, displayWidth, displayHeight);
+        } else {
+          ctx.drawImage(witchImg, sx, sy, spriteWidth, spriteHeight, x - displayWidth / 2, y - displayHeight / 2, displayWidth, displayHeight);
+        }
+        ctx.restore();
 
         // ── Sparkle effects ──────────────────────────────────────────
         for (const sp of sparkles) {
