@@ -3,11 +3,11 @@
 import { useEffect, useRef } from 'react';
 import { NavigationMesh, createHutNavMesh } from '@/game/navigation';
 import { Position, HutBounds, INGREDIENT_EMOJI, INGREDIENT_GLOW_COLOR } from '@/shared/types';
-import { gameState, addToInventory, addStars, setPhase, startBrewing, updateCollectAnimations, addCollectAnimation, completeOrder, getRecipeUnlocks, removeFromInventory } from '@/game/state';
+import { gameState, addToInventory, addStars, setPhase, startBrewing, updateCollectAnimations, addCollectAnimation, completeOrder, getRecipeUnlocks, removeFromInventory, addPotionEffect, updatePotionEffects, getEffectSpeedMultiplier } from '@/game/state';
 import { updateIngredients, findNearbyIngredient, removeIngredient } from '@/game/ingredients';
 import { findMatchingRecipe, consumeRecipeIngredients, getAllRecipesForDisplay } from '@/game/recipes';
 import { updateOrders, getOrderForRequester, hasMatchingPotion } from '@/game/orders';
-import { drawIngredientPickup, drawSparkles, drawBrewingBubbles, drawCollectAnimations, drawStarFlyAnimations } from '@/renderers/effects';
+import { drawIngredientPickup, drawSparkles, drawBrewingBubbles, drawCollectAnimations, drawStarFlyAnimations, drawPotionEffect } from '@/renderers/effects';
 import { drawHud, drawSpeechBubble, HudLayout } from '@/renderers/hud';
 import { drawBackground, drawHutGroundPatch } from '@/renderers/background';
 
@@ -94,6 +94,9 @@ export default function GameCanvas() {
     // Flying star animations toward the star counter
     let starFlies: { x: number; y: number; targetX: number; targetY: number; progress: number }[] = [];
 
+    // General frame counter used for animations
+    let frameCount = 0;
+
     // NPC celebration flip timers (in frames, count down to 0)
     const FLIP_DURATION = 80;
     let catFlipTimer = 0;
@@ -162,9 +165,12 @@ export default function GameCanvas() {
           return;
         }
 
-        // Tap on brewed potion slot to discard
+        // Tap on brewed potion slot – witch drinks the potion (visual effect on witch + discard)
         const ps = hudLayout.brewedPotionSlot;
         if (ps && pos.x >= ps.x && pos.x <= ps.x + ps.w && pos.y >= ps.y && pos.y <= ps.y + ps.h) {
+          if (gameState.brewedPotion) {
+            addPotionEffect(gameState.brewedPotion.id, 'witch');
+          }
           gameState.brewedPotion = null;
           return;
         }
@@ -265,6 +271,10 @@ export default function GameCanvas() {
       if (completed) {
         const stars = completed.recipe.rewardStars;
         addStars(stars);
+        // Trigger potion effect on the NPC that received it
+        if (requester === 'cat' || requester === 'monster') {
+          addPotionEffect(completed.recipe.id, requester);
+        }
         gameState.brewedPotion = null;
         const { catY, monsterY } = getNpcYPositions(canvas.height, hutBounds?.yOffset || 0);
         const npcPos = requester === 'cat'
@@ -445,15 +455,16 @@ export default function GameCanvas() {
           const dx = wp.x - x;
           const dy = wp.y - y;
           const dist = Math.hypot(dx, dy);
+          const effectiveSpeed = speed * getEffectSpeedMultiplier('witch');
 
-          if (dist <= speed) {
+          if (dist <= effectiveSpeed) {
             x = wp.x;
             y = wp.y;
             pathIndex++;
             isMoving = pathIndex < path.length;
           } else {
-            x += (dx / dist) * speed;
-            y += (dy / dist) * speed;
+            x += (dx / dist) * effectiveSpeed;
+            y += (dy / dist) * effectiveSpeed;
             if (dx > 0) facingRight = true;
             else if (dx < 0) facingRight = false;
             isMoving = true;
@@ -540,14 +551,15 @@ export default function GameCanvas() {
             if (catWaitFrames > 0) {
               catWaitFrames--;
             } else {
+              const effectiveCatSpeed = catSpeed * getEffectSpeedMultiplier('cat');
               const dx = catTargetX - catX;
-              if (Math.abs(dx) <= catSpeed) {
+              if (Math.abs(dx) <= effectiveCatSpeed) {
                 catX = catTargetX;
                 catWaitFrames = 60 + Math.random() * 120;
                 catTargetX = getRandomX(0.2, 0.7);
                 catFacingRight = catTargetX > catX;
               } else {
-                catX += Math.sign(dx) * catSpeed;
+                catX += Math.sign(dx) * effectiveCatSpeed;
               }
             }
           }
@@ -556,14 +568,15 @@ export default function GameCanvas() {
             if (monsterWaitFrames > 0) {
               monsterWaitFrames--;
             } else {
+              const effectiveMonsterSpeed = monsterSpeed * getEffectSpeedMultiplier('monster');
               const dx = monsterTargetX - monsterX;
-              if (Math.abs(dx) <= monsterSpeed) {
+              if (Math.abs(dx) <= effectiveMonsterSpeed) {
                 monsterX = monsterTargetX;
                 monsterWaitFrames = 100 + Math.random() * 200;
                 monsterTargetX = getRandomX(0.25, 0.65);
                 monsterFacingRight = monsterTargetX > monsterX;
               } else {
-                monsterX += Math.sign(dx) * monsterSpeed;
+                monsterX += Math.sign(dx) * effectiveMonsterSpeed;
               }
             }
           }
@@ -626,6 +639,32 @@ export default function GameCanvas() {
           if (monsterOrder) {
             drawSpeechBubble(ctx, monsterX, monsterY - displayH - 10, monsterOrder.recipe.emoji, bubbleSize);
           }
+
+          // ── Potion effects on NPCs ─────────────────────────────────
+          for (const ef of gameState.activeEffects.filter(e => e.target === 'cat' || e.target === 'monster')) {
+            const progress = 1 - ef.timer / ef.maxTimer;
+            let ex: number;
+            let ey: number;
+            if (ef.target === 'cat') {
+              ex = catX;
+              ey = catY - displayH * 0.5;
+            } else {
+              ex = monsterX;
+              ey = monsterY - displayH * 0.5;
+            }
+            drawPotionEffect(ctx, ef.recipeId, ex, ey, progress, frameCount);
+          }
+        }
+
+        // ── Tick potion effect timers once per frame ──────────────────
+        updatePotionEffects();
+
+        // ── Potion effects on the witch (drawn independently of NPC block) ──
+        for (const ef of gameState.activeEffects) {
+          if (ef.target === 'witch') {
+            const progress = 1 - ef.timer / ef.maxTimer;
+            drawPotionEffect(ctx, ef.recipeId, x, y - displayHeight * 0.5, progress, frameCount);
+          }
         }
 
         // ── Draw witch in foreground ──────────────────────────────────
@@ -663,6 +702,7 @@ export default function GameCanvas() {
         // ── HUD ───────────────────────────────────────────────────────
         hudLayout = drawHud(ctx, gameState, cw, ch);
 
+        frameCount++;
         animationFrameId = requestAnimationFrame(render);
       };
 
