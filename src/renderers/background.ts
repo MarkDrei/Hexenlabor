@@ -145,7 +145,7 @@ function drawSun(ctx: CanvasRenderingContext2D, width: number, height: number, p
   const horizonFactor = 1 - Math.sin(sunAngle);
   const sunGreen = Math.round(lerp(255, 160, horizonFactor));
   const sunBlue  = Math.round(lerp(100,  10, horizonFactor));
-  const sunRadius = Math.max(16, width * 0.033);
+  const sunRadius = Math.max(48, width * 0.099);
 
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -187,11 +187,11 @@ function drawMoon(ctx: CanvasRenderingContext2D, width: number, height: number, 
   if (progress === null) return;
 
   const moonAngle = progress * Math.PI;
-  const moonX = width * (1 - progress); // rises from right, sets to left
+  const moonX = width * progress; // rises from left, sets to right
   const moonY = height * 0.42 - height * 0.38 * Math.sin(moonAngle);
 
   const alpha = Math.min(smoothstep(0, 0.08, progress), smoothstep(1, 0.92, progress));
-  const moonRadius = Math.max(13, width * 0.025);
+  const moonRadius = Math.max(39, width * 0.075);
 
   ctx.save();
   ctx.globalAlpha = alpha;
