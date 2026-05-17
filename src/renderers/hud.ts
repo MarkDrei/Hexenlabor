@@ -13,13 +13,13 @@ const REQUESTER_EMOJI: Record<Requester, string> = {
   visitor: '🧙',
 };
 
-/** Draw the stars counter (top-left) */
+/** Draw the stars counter (top-left). Returns its bounding box for long-press detection. */
 function drawStarsCounter(
   ctx: CanvasRenderingContext2D,
   stars: number,
   level: number,
   fontSize: number,
-): void {
+): { x: number; y: number; w: number; h: number } {
   ctx.save();
   ctx.font = `bold ${fontSize}px sans-serif`;
   ctx.textAlign = 'left';
@@ -34,6 +34,11 @@ function drawStarsCounter(
   ctx.fillStyle = '#a78bfa';
   ctx.fillText(`Lv.${level}`, 16, 12 + fontSize + 4);
   ctx.restore();
+
+  // Approximate bounding box covering both lines
+  const w = Math.max(100, fontSize * 5);
+  const h = fontSize + fontSize * 0.7 + 8;
+  return { x: 8, y: 6, w, h };
 }
 
 const INVENTORY_MAX_SLOTS = 8;
@@ -567,6 +572,7 @@ export interface HudLayout {
   inventorySlots: { x: number; y: number; w: number; h: number }[];
   brewedPotionSlot: { x: number; y: number; w: number; h: number } | null;
   recipeBookSlots: { x: number; y: number; w: number; h: number }[];
+  starsLevelArea: { x: number; y: number; w: number; h: number };
 }
 
 /** Main HUD draw function */
@@ -579,7 +585,7 @@ export function drawHud(
   const fontSize = Math.max(16, Math.min(24, canvasWidth * 0.025));
   const slotSize = Math.max(36, Math.min(52, canvasWidth * 0.04));
 
-  drawStarsCounter(ctx, state.stars, state.level, fontSize);
+  const starsLevelArea = drawStarsCounter(ctx, state.stars, state.level, fontSize);
   const inventorySlots = drawInventory(ctx, state, canvasWidth, slotSize);
   const brewedPotionSlot = drawBrewedPotionSlot(ctx, state, canvasWidth, slotSize);
   drawActiveRecipeHint(ctx, state, canvasWidth, slotSize);
@@ -596,5 +602,5 @@ export function drawHud(
     drawCelebration(ctx, canvasWidth, canvasHeight, state.level, state.celebrateTimer);
   }
 
-  return { recipeBookBtn, inventorySlots, brewedPotionSlot, recipeBookSlots };
+  return { recipeBookBtn, inventorySlots, brewedPotionSlot, recipeBookSlots, starsLevelArea };
 }

@@ -8,8 +8,24 @@ import {
   CollectAnimation,
   PotionEffect,
 } from '@/shared/types';
+import { loadProgress, saveProgress, clearProgress } from '@/game/persistence';
 
-const LEVEL_THRESHOLDS = [0, 50, 150, 350, 700, 1500];
+// Hardcoded thresholds for the first 6 levels (indices 0–5, where index = level number).
+// Beyond level 5, each level requires roughly double the stars of the previous level-up gap.
+// Increment at level 5→6 is 800; it doubles each subsequent level.
+const LEVEL_THRESHOLDS_BASE = [0, 50, 150, 350, 700, 1500];
+
+/**
+ * Returns the total stars needed to reach `level` (0-indexed by level number).
+ * Extends the table infinitely using the same doubling-gap math.
+ */
+function getLevelThreshold(level: number): number {
+  if (level < LEVEL_THRESHOLDS_BASE.length) {
+    return LEVEL_THRESHOLDS_BASE[level];
+  }
+  // gap at level 6 = 800, doubles each subsequent level
+  return Math.round(1500 + 1600 * (Math.pow(2, level - 5) - 1));
+}
 
 function createInitialState(): GameState {
   return {
@@ -31,10 +47,21 @@ function createInitialState(): GameState {
   };
 }
 
-export const gameState: GameState = createInitialState();
+export const gameState: GameState = (() => {
+  const state = createInitialState();
+  const saved = loadProgress();
+  if (saved) {
+    state.stars = saved.stars;
+    state.score = saved.score;
+    state.level = saved.level;
+    state.unlockedRecipes = saved.unlockedRecipes;
+  }
+  return state;
+})();
 
 export function resetState(): void {
   Object.assign(gameState, createInitialState());
+  clearProgress();
 }
 
 const MAX_INVENTORY_SLOTS = 8;
@@ -79,15 +106,21 @@ export function inventoryEmpty(): boolean {
 export function addStars(amount: number): void {
   gameState.stars += amount;
   gameState.score += amount;
-  // Check level-up
-  while (
-    gameState.level < LEVEL_THRESHOLDS.length - 1 &&
-    gameState.stars >= LEVEL_THRESHOLDS[gameState.level]
-  ) {
+  // Check level-up: extend infinitely using getLevelThreshold.
+  // Cache the threshold to avoid redundant calculations when multiple level-ups occur.
+  let nextThreshold = getLevelThreshold(gameState.level);
+  while (gameState.stars >= nextThreshold) {
     gameState.level++;
     gameState.phase = 'celebrating';
     gameState.celebrateTimer = 180; // ~3 seconds at 60fps
+    nextThreshold = getLevelThreshold(gameState.level);
   }
+  saveProgress({
+    stars: gameState.stars,
+    score: gameState.score,
+    level: gameState.level,
+    unlockedRecipes: gameState.unlockedRecipes,
+  });
 }
 
 export function addOrder(order: Order): void {

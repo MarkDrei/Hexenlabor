@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { NavigationMesh, createHutNavMesh } from '@/game/navigation';
 import { Position, HutBounds, INGREDIENT_EMOJI, INGREDIENT_GLOW_COLOR } from '@/shared/types';
-import { gameState, addToInventory, addStars, setPhase, startBrewing, updateCollectAnimations, addCollectAnimation, completeOrder, getRecipeUnlocks, removeFromInventory, addPotionEffect, updatePotionEffects, getEffectSpeedMultiplier } from '@/game/state';
+import { gameState, addToInventory, addStars, setPhase, startBrewing, updateCollectAnimations, addCollectAnimation, completeOrder, getRecipeUnlocks, removeFromInventory, addPotionEffect, updatePotionEffects, getEffectSpeedMultiplier, resetState } from '@/game/state';
 import { updateIngredients, findNearbyIngredient, removeIngredient } from '@/game/ingredients';
 import { findMatchingRecipe, consumeRecipeIngredients, getAllRecipesForDisplay } from '@/game/recipes';
 import { updateOrders, getOrderForRequester, hasMatchingPotion } from '@/game/orders';
@@ -235,6 +235,19 @@ export default function GameCanvas() {
 
     const handleLongPress = (pos: Position) => {
       if (!hutBounds) return;
+
+      // Long-press on the stars / level area → offer a reset
+      if (hudLayout) {
+        const sla = hudLayout.starsLevelArea;
+        if (pos.x >= sla.x && pos.x <= sla.x + sla.w && pos.y >= sla.y && pos.y <= sla.y + sla.h) {
+          if (window.confirm('Fortschritt wirklich zurücksetzen?\nAlle Sterne und Level gehen verloren!')) {
+            resetState();
+            getRecipeUnlocks();
+          }
+          return;
+        }
+      }
+
       const { catY, monsterY } = getNpcYPositions(canvas.height, hutBounds.yOffset);
 
       // Check potion delivery FIRST so it takes priority over petting
