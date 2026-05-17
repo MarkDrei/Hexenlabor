@@ -330,7 +330,9 @@ export default function GameCanvas() {
           });
         }
       }
-      setPhase('exploring');
+      if (gameState.phase !== 'celebrating') {
+        setPhase('exploring');
+      }
       gameState.brewingState = null;
     };
 
@@ -663,7 +665,7 @@ export default function GameCanvas() {
         for (const ef of gameState.activeEffects) {
           if (ef.target === 'witch') {
             const progress = 1 - ef.timer / ef.maxTimer;
-            drawPotionEffect(ctx, ef.recipeId, x, y - displayHeight * 0.5, progress, frameCount);
+            drawPotionEffect(ctx, ef.recipeId, x, y, progress, frameCount);
           }
         }
 
