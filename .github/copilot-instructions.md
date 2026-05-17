@@ -239,11 +239,52 @@ npm run lint && npx tsc --noEmit && npx vitest run && npm run build
 
 ## 🎨 Styling & Theme
 
-- **Primary**: `#7c3aed` (hexenlabor.primary)
-- **Secondary**: `#a78bfa` (hexenlabor.secondary)
-- **Accent**: `#ec4899` (hexenlabor.accent)
-- **Background**: `bg-slate-900` (dark)
-- **Text**: `text-slate-100`
+- **Primary lilac**: `#a78bfa` — inventory borders, dialog borders, interactive accents  (`--color-primary` CSS variable)
+- **Primary dark**: `#7c3aed` — filled backgrounds, hover/active states (`--color-primary-dark`)
+- **Background body**: `#0f172a` — `bg-slate-900` / `--color-bg-body`
+- **Surface**: `#1e293b` — card/dialog backgrounds / `--color-bg-surface`
+- **Text**: `#e2e8f0` / `--color-text`; muted: `#94a3b8` / `--color-text-muted`
+- **Accent**: `#ec4899` (`hexenlabor.accent`) — used sparingly for brewed-potion slot
+
+### CSS Custom Properties (defined in `src/app/globals.css`)
+
+All primary color values are centralized as CSS variables so they can be used in both HTML/CSS components and canvas drawing code:
+
+```css
+--color-primary: #a78bfa;
+--color-primary-dark: #7c3aed;
+--color-bg-body: #0f172a;
+--color-bg-surface: #1e293b;
+--color-text: #e2e8f0;
+--color-text-muted: #94a3b8;
+```
+
+### In-game HTML Overlays (dialogs, modals)
+
+Use the `ConfirmDialog` component for confirmation prompts. It is styled with the dark theme and lilac primary color:
+
+```tsx
+import ConfirmDialog from '@/components/ConfirmDialog';
+
+// In a 'use client' component with useState:
+{showDialog && (
+  <ConfirmDialog
+    message="Haupttitel"
+    subMessage="Erklärungstext"
+    confirmLabel="Bestätigen"
+    cancelLabel="Abbrechen"
+    onConfirm={handleConfirm}
+    onCancel={() => setShowDialog(false)}
+  />
+)}
+```
+
+Never use `window.confirm()` — it blocks the main thread, can't be styled, and provides poor UX on mobile. Always use `ConfirmDialog` for in-game prompts.
+
+Tailwind hex color aliases (defined in `tailwind.config.ts`):
+- `hexenlabor.primary` = `#7c3aed`
+- `hexenlabor.secondary` = `#a78bfa`
+- `hexenlabor.accent` = `#ec4899`
 
 ---
 

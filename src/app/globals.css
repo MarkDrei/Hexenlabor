@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Primary lilac — used for inventory borders, dialog borders, and interactive accents */
+  --color-primary: #a78bfa;
+  /* Darker purple — used for hover/active states and filled backgrounds */
+  --color-primary-dark: #7c3aed;
+  /* Surface colors */
+  --color-bg-body: #0f172a;
+  --color-bg-surface: #1e293b;
+  /* Text */
+  --color-text: #e2e8f0;
+  --color-text-muted: #94a3b8;
+}
+
 * {
   margin: 0;
   padding: 0;
