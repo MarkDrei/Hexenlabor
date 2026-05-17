@@ -1,15 +1,16 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavigationMesh, createHutNavMesh } from '@/game/navigation';
 import { Position, HutBounds, INGREDIENT_EMOJI, INGREDIENT_GLOW_COLOR } from '@/shared/types';
-import { gameState, addToInventory, addStars, setPhase, startBrewing, updateCollectAnimations, addCollectAnimation, completeOrder, getRecipeUnlocks, removeFromInventory, addPotionEffect, updatePotionEffects, getEffectSpeedMultiplier, resetState } from '@/game/state';
+import { gameState, addToInventory, addStars, setPhase, startBrewing, updateCollectAnimations, addCollectAnimation, completeOrder, getRecipeUnlocks, removeFromInventory, addPotionEffect, updatePotionEffects, getEffectSpeedMultiplier, resetState, saveGameProgress } from '@/game/state';
 import { updateIngredients, findNearbyIngredient, removeIngredient } from '@/game/ingredients';
 import { findMatchingRecipe, consumeRecipeIngredients, getAllRecipesForDisplay } from '@/game/recipes';
 import { updateOrders, getOrderForRequester, hasMatchingPotion } from '@/game/orders';
 import { drawIngredientPickup, drawSparkles, drawBrewingBubbles, drawCollectAnimations, drawStarFlyAnimations, drawPotionEffect } from '@/renderers/effects';
 import { drawHud, drawSpeechBubble, HudLayout } from '@/renderers/hud';
 import { drawBackground, drawHutGroundPatch } from '@/renderers/background';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 const CAT_FLOOR_DROP_PX = 10;
 const MONSTER_FLOOR_DROP_PX = 25;
@@ -23,6 +24,7 @@ function getNpcYPositions(canvasHeight: number, yOffset: number) {
 
 export default function GameCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [showResetDialog, setShowResetDialog] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -240,10 +242,7 @@ export default function GameCanvas() {
       if (hudLayout) {
         const sla = hudLayout.starsLevelArea;
         if (pos.x >= sla.x && pos.x <= sla.x + sla.w && pos.y >= sla.y && pos.y <= sla.y + sla.h) {
-          if (window.confirm('Fortschritt wirklich zurücksetzen?\nAlle Sterne und Level gehen verloren!')) {
-            resetState();
-            getRecipeUnlocks();
-          }
+          setShowResetDialog(true);
           return;
         }
       }
@@ -328,6 +327,7 @@ export default function GameCanvas() {
         addStars(starsEarned);
         gameState.brewedPotion = recipe;
         consumeRecipeIngredients(recipe);
+        saveGameProgress(); // consumeRecipeIngredients mutated inventory; addStars already persisted stars
         getRecipeUnlocks();
         // Always reset the selected recipe after brewing
         gameState.selectedRecipe = null;
@@ -733,6 +733,12 @@ export default function GameCanvas() {
     };
   }, []);
 
+  const handleResetConfirm = () => {
+    resetState();
+    getRecipeUnlocks();
+    setShowResetDialog(false);
+  };
+
   return (
     <div className="fixed inset-0 bg-slate-900 flex items-center justify-center touch-none">
       <canvas
@@ -740,6 +746,16 @@ export default function GameCanvas() {
         className="block"
         style={{ touchAction: 'none' }}
       />
+      {showResetDialog && (
+        <ConfirmDialog
+          message="Fortschritt zurücksetzen?"
+          subMessage="Alle Sterne und Level gehen verloren!"
+          confirmLabel="Zurücksetzen"
+          cancelLabel="Abbrechen"
+          onConfirm={handleResetConfirm}
+          onCancel={() => setShowResetDialog(false)}
+        />
+      )}
     </div>
   );
 }

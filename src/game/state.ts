@@ -27,6 +27,20 @@ function getLevelThreshold(level: number): number {
   return Math.round(1500 + 1600 * (Math.pow(2, level - 5) - 1));
 }
 
+/**
+ * Computes the level a player is at given their total stars.
+ * Mirrors the level-up logic in addStars().
+ */
+function computeLevelFromStars(stars: number): number {
+  let level = 1;
+  let threshold = getLevelThreshold(level);
+  while (stars >= threshold) {
+    level++;
+    threshold = getLevelThreshold(level);
+  }
+  return level;
+}
+
 function createInitialState(): GameState {
   return {
     score: 0,
@@ -53,8 +67,9 @@ export const gameState: GameState = (() => {
   if (saved) {
     state.stars = saved.stars;
     state.score = saved.score;
-    state.level = saved.level;
-    state.unlockedRecipes = saved.unlockedRecipes;
+    state.inventory = saved.inventory;
+    // Derive level and unlockedRecipes from stars (never stored)
+    state.level = computeLevelFromStars(saved.stars);
   }
   return state;
 })();
@@ -62,6 +77,15 @@ export const gameState: GameState = (() => {
 export function resetState(): void {
   Object.assign(gameState, createInitialState());
   clearProgress();
+}
+
+/** Persist current stars, score and inventory to localStorage. */
+export function saveGameProgress(): void {
+  saveProgress({
+    stars: gameState.stars,
+    score: gameState.score,
+    inventory: gameState.inventory,
+  });
 }
 
 const MAX_INVENTORY_SLOTS = 8;
@@ -72,10 +96,12 @@ export function addToInventory(type: IngredientType): boolean {
   if (existing) {
     if (existing.count >= MAX_STACK) return false;
     existing.count++;
+    saveGameProgress();
     return true;
   }
   if (gameState.inventory.length >= MAX_INVENTORY_SLOTS) return false;
   gameState.inventory.push({ type, count: 1 });
+  saveGameProgress();
   return true;
 }
 
@@ -87,11 +113,13 @@ export function removeFromInventory(index: number): IngredientType | null {
   if (slot.count <= 0) {
     gameState.inventory.splice(index, 1);
   }
+  saveGameProgress();
   return type;
 }
 
 export function clearInventory(): void {
   gameState.inventory = [];
+  saveGameProgress();
 }
 
 export function inventoryFull(): boolean {
@@ -115,12 +143,7 @@ export function addStars(amount: number): void {
     gameState.celebrateTimer = 180; // ~3 seconds at 60fps
     nextThreshold = getLevelThreshold(gameState.level);
   }
-  saveProgress({
-    stars: gameState.stars,
-    score: gameState.score,
-    level: gameState.level,
-    unlockedRecipes: gameState.unlockedRecipes,
-  });
+  saveGameProgress();
 }
 
 export function addOrder(order: Order): void {

@@ -1,9 +1,11 @@
-/** Fields persisted across page reloads (player progression only). */
+import { IngredientType } from '@/shared/types';
+
+/** Fields persisted across page reloads. Only raw data is stored — derived fields
+ *  (level, unlockedRecipes) are computed from stars on load, not stored. */
 export interface PersistedProgress {
   stars: number;
   score: number;
-  level: number;
-  unlockedRecipes: string[];
+  inventory: { type: IngredientType; count: number }[];
 }
 
 const STORAGE_KEY = 'hexenlabor_progress';
@@ -26,15 +28,15 @@ export function loadProgress(): PersistedProgress | null {
     if (
       typeof parsed.stars === 'number' &&
       typeof parsed.score === 'number' &&
-      typeof parsed.level === 'number' &&
-      Array.isArray(parsed.unlockedRecipes) &&
-      parsed.unlockedRecipes.every((r) => typeof r === 'string')
+      Array.isArray(parsed.inventory) &&
+      parsed.inventory.every(
+        (s) => typeof s === 'object' && s !== null && typeof s.type === 'string' && typeof s.count === 'number',
+      )
     ) {
       return {
         stars: parsed.stars,
         score: parsed.score,
-        level: parsed.level,
-        unlockedRecipes: parsed.unlockedRecipes as string[],
+        inventory: parsed.inventory as { type: IngredientType; count: number }[],
       };
     }
     return null;
