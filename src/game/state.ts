@@ -41,6 +41,28 @@ function computeLevelFromStars(stars: number): number {
   return level;
 }
 
+// Level 1: heiltrank, schlaftrank
+// Level 2: +liebestrank
+// Level 3: +feuertrank
+// Level 4: +sternenstaub, +mondtrank
+// Level 5: +regenbogentrank, +ewigkeitstrank
+const RECIPE_UNLOCKS_BY_LEVEL: string[][] = [
+  [],
+  ['heiltrank', 'schlaftrank'],
+  ['liebestrank'],
+  ['feuertrank'],
+  ['sternenstaub', 'mondtrank'],
+  ['regenbogentrank', 'ewigkeitstrank'],
+];
+
+function computeUnlockedRecipes(level: number): string[] {
+  const all: string[] = [];
+  for (let l = 1; l <= level; l++) {
+    if (RECIPE_UNLOCKS_BY_LEVEL[l]) all.push(...RECIPE_UNLOCKS_BY_LEVEL[l]);
+  }
+  return all;
+}
+
 function createInitialState(): GameState {
   return {
     score: 0,
@@ -70,6 +92,7 @@ export const gameState: GameState = (() => {
     state.inventory = saved.inventory;
     // Derive level and unlockedRecipes from stars (never stored)
     state.level = computeLevelFromStars(saved.stars);
+    state.unlockedRecipes = computeUnlockedRecipes(state.level);
   }
   return state;
 })();
@@ -188,25 +211,8 @@ export function updateCollectAnimations(): void {
 }
 
 export function getRecipeUnlocks(): string[] {
-  // Level 1: heiltrank, schlaftrank
-  // Level 2: +liebestrank
-  // Level 3: +feuertrank
-  // Level 4: +sternenstaub, +mondtrank
-  // Level 5: +regenbogentrank, +ewigkeitstrank
-  const unlocks: string[][] = [
-    [],
-    ['heiltrank', 'schlaftrank'],
-    ['liebestrank'],
-    ['feuertrank'],
-    ['sternenstaub', 'mondtrank'],
-    ['regenbogentrank', 'ewigkeitstrank'],
-  ];
-  const all: string[] = [];
-  for (let l = 1; l <= gameState.level; l++) {
-    if (unlocks[l]) all.push(...unlocks[l]);
-  }
-  gameState.unlockedRecipes = all;
-  return all;
+  gameState.unlockedRecipes = computeUnlockedRecipes(gameState.level);
+  return gameState.unlockedRecipes;
 }
 
 const POTION_EFFECT_DURATION = 1200; // ~20 seconds at 60 fps
